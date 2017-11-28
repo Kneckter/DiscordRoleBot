@@ -1,0 +1,76 @@
+{ 
+	"token": "APP-BOT-TOKEN-HERE",
+	"botID": "APP-BOT-USER-ID",
+	"ownerID": "YOUR-PERSONAL-USER-ID",
+	"serverName": "YOUR-SERVER-NAME",
+	"serverID": "YOUR-SERVER-ID",
+	
+	"cmdPrefix": "!",
+	
+	"adminRoleName": "ADMIN-ROLE-NAME",
+	"modRoleName": "MODERATOR-ROLE-NAME",
+	
+	"inviteUrl": "YOUR-INVITE-URL-OR-LINK",
+	
+	"mapMain": { 
+		"enabled": "no", 
+		"url": "MAP-URL-LINK"
+	},
+		
+	"mapRaids": { 
+		"enabled": "no", 
+		"url": "RAID-URL-LINK"
+	},
+		
+	"mapCoverage": { 
+		"enabled": "no", 
+		"url": "MAP-URL-LINK"
+	},
+		
+	"mapZones": { 
+		"enabled": "no", 
+		"url": "MAP-URL-LINK"
+	},
+		
+	"mapHoods": { 
+		"enabled": "no", 
+		"url": "MAP-URL-LINK"
+	},
+	
+	"patreon": { 
+		"enabled": "no", 
+		"url": "PATREON-URL-LINK",
+		"img": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/LogoOutLine.png"
+	},
+	
+	"paypal": { 
+		"enabled": "no", 
+		"url": "PAYPAL-URL-LINK",
+		"img": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/LogoOutLine.png"
+	},
+	
+	"rulesChannelID": "RULES-CHANNEL-ID",
+	"announcementChannelID": "ANNOUNCEMENTS-CHANNEL-ID",
+	"mainChannelID": "MAIN-CHAT-CHANNEL-ID",
+	"modlogChannelID": "MOD-LOG-CHANNEL-ID",
+	"botsupportChannelID": "BOT-CHANNEL-ID",
+	
+	"banEvents": "no",
+	
+	"tos": {
+		"enabled": "no",
+		"channelID": "TOS-CHANNEL-ID",
+		"roleNameToGive": "agreed-tos"
+	},
+	"rules": {
+		"enabled": "no",
+		"channelID": "RULES-CHANNEL-ID",
+		"roleNameToGive": "agreed-rulz"
+	},
+	
+	"offlineImg": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/User-Offline.png",
+	"warningImg": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/User-Warned.png",
+	"mutedImg": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/User-Muted.png",
+	"kickedImg": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/User-Kicked.png",
+	"bannedImg": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/User-Banned.png"
+}
