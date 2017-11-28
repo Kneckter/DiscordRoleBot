@@ -1,4 +1,5 @@
 const Discord=require('discord.js');
+const fs=require('fs');
 const sql = require("sqlite");
 sql.open("./files/dataBase.sqlite");
 const config=require('./files/config.json');
@@ -73,41 +74,36 @@ setInterval(function(){
 	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
 	
 	let timeNow=new Date().getTime(); let dbTime=""; let daysLeft="";
-	sql.all(`SELECT * FROM temporary_roles`)
-		.then(rows => {
-			if (!rows) {
-				return console.info("No one is in the DataBase");
-			}
-			else {
-				for(rowNumber="0"; rowNumber<rows.length; rowNumber++){
-					dbTime=rows[rowNumber].endDate; daysLeft=(dbTime*1)-(timeNow*1);
-					if(daysLeft<1){
-						member=bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID); if(!member){ member.user.username="<@"+rows[rowNumber].userID+">"; member.id=""; }
-						console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+member.user.username+"\" ("+member.id+") have lost their role: "+rows[rowNumber].temporaryRole+"... time EXPIRED");
-						bot.channels.get("271531913381019648").send("⚠ <@"+rows[rowNumber].userID+"> have **lost** their role of: **"
-							+rows[rowNumber].temporaryRole+"** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
-						
-						// REMOVE ROLE FROM MEMBER IN GUILD
-						let rName=bot.guilds.get(config.serverID).roles.find('name', rows[rowNumber].temporaryRole); 
-						bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID).removeRole(rName).catch(console.error);
-						
-						// REMOVE DATABASE ENTRY
-						sql.get(`DELETE FROM temporary_roles WHERE userID="${rows[rowNumber].userID}"`).catch(console.error);
-					}
+	sql.all(`SELECT * FROM temporary_roles`).then(rows => {
+		if (!rows) {
+			return console.info("No one is in the DataBase");
+		}
+		else {
+			for(rowNumber="0"; rowNumber<rows.length; rowNumber++){
+				dbTime=rows[rowNumber].endDate; daysLeft=(dbTime*1)-(timeNow*1);
+				if(daysLeft<1){
+					member=bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID); if(!member){ member.user.username="<@"+rows[rowNumber].userID+">"; member.id=""; }
+					console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+member.user.username+"\" ("+member.id+") have lost their role: "+rows[rowNumber].temporaryRole+"... time EXPIRED");
+					bot.channels.get(config.mainChannelID).send("⚠ <@"+rows[rowNumber].userID+"> have **lost** their role of: **"
+						+rows[rowNumber].temporaryRole+"** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
+					
+					// REMOVE ROLE FROM MEMBER IN GUILD
+					let rName=bot.guilds.get(config.serverID).roles.find('name', rows[rowNumber].temporaryRole); 
+					bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID).removeRole(rName).catch(console.error);
+					
+					// REMOVE DATABASE ENTRY
+					sql.get(`DELETE FROM temporary_roles WHERE userID="${rows[rowNumber].userID}"`).catch(console.error);
 				}
 			}
-		})
-		.catch(()=>{
-			console.info(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] Database Table was not found... Creating Table now...");
-			sql.run("CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT)").catch(console.error);
-			console.info(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] Database Table created successfully");
-		});
-},21600000);
-// 24hrs 86400000
-// 12hrs 43200000
-// 6hrs 21600000
-// 3hrs 10800000
-// 1hr 3600000
+		}
+	}).catch(console.error);
+},3600000);
+// 86400000 = 24hrs
+// 43200000 = 12hrs
+// 21600000 = 6hrs
+// 10800000 = 3hrs 
+// 3600000 = 1hr
+
 
 //
 // END
@@ -544,10 +540,10 @@ bot.on('message', message => {
 					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
 				}
 				if(args[2]==="remove"){
-					mentioned.removeRole(rName).catch(()=>{console.info(timeStampSys+"[ADMIN] [ERROR L547] I CANNOT REMOVE THIS ROLE, THIS ROLE IS HIGHER THAN MY OWN");});
+					mentioned.removeRole(rName).catch(console.error);
 					return c.send("⚠ "+mentioned+" have **lost** their role of: **"+args[0]+"** 😅 ");
 				}
-				mentioned.addRole(rName).catch(()=>{console.info(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] [ERROR L550] I CANNOT ADD THIS ROLE, THIS ROLE IS HIGHER THAN MY OWN");});
+				mentioned.addRole(rName).catch(console.error);
 				return c.send("👍 "+mentioned+", has been given the role of: **"+args[0]+"**, enjoy! 🎉");
 			}
 		}
@@ -561,14 +557,11 @@ bot.on('message', message => {
 	
 // ############################## ROLES ##############################
 	if(command.startsWith("temprole") || command==="tr" || command==="trole"){
-
-		// CREATE DATABASE TABLE 
-		sql.run("CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT)").catch(console.error);
-
-		// ROLES ARE CASE SENSITIVE SO RESET MESSAGE AND ARGUMENTS
+		
+		// ROLES ARE CASE SENSITIVE TO RESET MESSAGE AND ARGUMENTS
 		msg=message.content; args=msg.split(" ").slice(1);
 		
-		if(m.roles.has(AdminR.id) || m.id===config.ownerID){
+		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 			// message.delete();
 			if(!args[0]){
 				return message.reply("syntax:\n `!temprole <ROLE-NAME> @mention <DAYS>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
@@ -579,6 +572,8 @@ bot.on('message', message => {
 			else {
 				let beginningOfTime=1511753994999; let dateMultiplier=86400000; mentioned=message.mentions.members.first(); 
 				
+				// CREATE DATABASE TABLE 
+				sql.run("CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT)").catch(console.error);
 				
 				// CHECK DATABASE FOR ROLES
 				if(args[0]==="check"){
@@ -643,10 +638,7 @@ bot.on('message', message => {
 					else {
 						return message.reply("this user already has a **temporary** role... try using `!temprole remove @"+mentioned.user.username+"` if you want to **change** their role.");
 					}
-				}).catch(()=>{sql.run("CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT)").then(()=>{
-					sql.run("INSERT INTO temporary_roles (userID, temporaryRole, startDate, endDate, addedBy) VALUES (?, ?, ?, ?, ?)", 
-							[mentioned.id, args[0], curDate, finalDate, m.id]);
-				}).catch(console.error);});
+				}).catch(console.error);
 			}
 		}
 		else {
@@ -760,6 +752,7 @@ bot.on('message', message => {
 		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
 		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
+
 			if(!mentioned){
 				message.delete();
 				return message.reply("please `@mention` a person you want me to `!mute`");
