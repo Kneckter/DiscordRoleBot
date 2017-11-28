@@ -1,5 +1,4 @@
 const Discord=require('discord.js');
-const fs=require('fs');
 const sql = require("sqlite");
 sql.open("./files/dataBase.sqlite");
 const config=require('./files/config.json');
