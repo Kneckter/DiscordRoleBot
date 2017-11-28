@@ -1,3 +1,7 @@
+# VISIT THE WIKI FOR INFO, AND SCREENSHOTS
+Adding them right now, list of commands, functions, etc...
+
+
 # SimpleDiscordBot
 Simple Discord[bot] using JavaScript, for basic fuctions and watching over a server, usefull for PokemonGo servers... and others of course, with a little more development....
 
