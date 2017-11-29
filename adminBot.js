@@ -309,6 +309,7 @@ bot.on('message', message => {
 										+'**Reason**: Command Spamming\n**Command**: !'+message.content+'\n\n**By**: AutoDetect \n**On**: '+timeStamp
 								};
 								bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
+								g.member(m.user.id).kick();
 							}
 							
 							// IF TYPED 3 COMMANDS WARN THEM
