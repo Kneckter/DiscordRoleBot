@@ -35,7 +35,7 @@ bot.on('message', message => {
 		
 		let txt="Hey @everyone quick! \nA wild **Unown** has just __spawned__! <(^.^<)\n"
 			+"**Letter**: "+ etitle[2] +"\n" + edescription + "\n**GoogleMaps**: " + eurl;
-		bot.channels.get("CHANNEL-TO-RESEND").send(txt).catch(console.error); // SPM+
+		bot.channels.get(config.mainChannelID).send(txt).catch(console.error); // SPM+
 	}
 	
 	
