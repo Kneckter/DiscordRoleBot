@@ -166,50 +166,6 @@ bot.on('message', message => {
 	
 	
 	
-// ############################## CENSORSHIP ##############################
-	if(command==="agree"){
-		if(args[0]==="rules"){
-			sql.get(`SELECT * FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-				if (!row) {
-					sql.run("INSERT INTO blocked_words (word, addedBy) VALUES (?, ?)", [args[1], m.user.username]);
-					return message.reply("I've added \"**"+args[1]+"**\" to my `DataBase` list of censored words");
-				}
-				else {
-					return message.reply("word already exist, would you like to `!censor add "+args[1]+"` instead?");
-				}
-			}).catch(() => {
-				console.error;
-				sql.run("CREATE TABLE IF NOT EXISTS blocked_words (word TEXT, addedBy INTEGER)").then(() => {
-					sql.run("INSERT INTO blocked_words (word, addedBy) VALUES (?, ?)", [args[1], m.user.username]);
-				});
-			});
-		}
-		if(args[0]==="check"){
-			sql.get(`SELECT * FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-				if(!row){
-					return message.reply("\"**"+args[1]+"**\" is __NOT__ in my `DataBase`");
-				}
-				else {
-					return message.reply("\"**"+args[1]+"**\" is in my `DataBase`, `"+row.addedBy+"` added it.");
-				}
-			}).catch(console.error);
-		}
-		if(args[0]==="del"){
-			sql.get(`SELECT * FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-				if(!row){
-					return message.reply("\"**"+args[1]+"**\" is __NOT__ in my `DataBase`");
-				}
-				else {
-					sql.get(`DELETE FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-						return message.reply("\"**"+args[1]+"**\" has been removed from my `DataBase`");
-					});
-				}
-			}).catch(console.error);
-		}
-	}
-	
-	
-	
 // ######################### SERVER STATUS #############################
 	if(command==="hash") {
 		return c.send("Hashing Server Status: https://status.buddyauth.com/ ").catch(console.error);
