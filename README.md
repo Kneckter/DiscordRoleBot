@@ -63,7 +63,8 @@ PM2 allows you to run processes in the background, you can access PM2 from anywh
 
 `npm install pm2 -g`
 
-`pm2 start SimpleBot.js`
+`pm2 start adminBot.js`
+`pm2 start userBot.js`
 
 To modify the file and keep bot up-to-date (auto reloading):
 
