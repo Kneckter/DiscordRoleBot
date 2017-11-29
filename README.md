@@ -3,9 +3,9 @@ Adding them right now, list of commands, functions, etc...
 
 
 # SimpleDiscordBot
-Simple Discord[bot] using JavaScript, for basic fuctions and watching over a server, usefull for PokemonGo servers... and others of course, with a little more development....
+Simple Discord[bot] using JavaScript, for basic fuctions and watching over a discord server, usefull for PokemonGo servers... and others of course, with a little more development....
 
-I wrote this long time ago for SeattlePokeMaps, but recently with the release of **SpoofNinja**, a lot of people have requested for the **HelpBot** release, so here it is, and people can stop inviting bots like "Celebi", "Dyno"... in their server; they can have their own bot and customize it!
+I wrote this long time ago for **SeattlePokeMaps**, but recently with the release (and success) of **SpoofNinja**, a lot of people have requested for the **HelpBot** release as well, so here it is... people can now stop inviting bots like "Celebi", "Dyno"... to their servers and have their own bot and customize it!
 
 -I am **NO** a ["python","javascript","discord.js"] expert so I bet there are people out there that can make something better.
 
