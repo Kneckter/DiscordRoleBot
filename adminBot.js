@@ -855,70 +855,9 @@ bot.on('message', message => {
 	
 	if(command==="restart"){
 		if(args[0]==="admin"){
-			process.exit(1);
+			message.reply("Restarting **Admin** (`adminBot.js`) branch... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
 		}
-	}
-	
-	
-	
-	
-	
-/*	
-	
-	
-	UNDER DEVELOPMENT... 
-	
-	
-// ############################## CENSORSHIP ##############################
-	if(command==="censor"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			if(args[0]==="add"){
-				sql.get(`SELECT * FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-					if (!row) {
-						sql.run("INSERT INTO blocked_words (word, addedBy) VALUES (?, ?)", [args[1], m.user.username]);
-						return message.reply("I've added \"**"+args[1]+"**\" to my `DataBase` list of censored words");
-					}
-					else {
-						return message.reply("word already exist, would you like to `!censor add "+args[1]+"` instead?");
-					}
-				}).catch(() => {
-					console.error;
-					sql.run("CREATE TABLE IF NOT EXISTS blocked_words (word TEXT, addedBy INTEGER)").then(() => {
-						sql.run("INSERT INTO blocked_words (word, addedBy) VALUES (?, ?)", [args[1], m.user.username]);
-					});
-				});
-			}
-			if(args[0]==="check"){
-				sql.get(`SELECT * FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-					if(!row){
-						return message.reply("\"**"+args[1]+"**\" is __NOT__ in my `DataBase`");
-					}
-					else {
-						return message.reply("\"**"+args[1]+"**\" is in my `DataBase`, `"+row.addedBy+"` added it.");
-					}
-				});
-			}
-			if(args[0]==="del"){
-				sql.get(`SELECT * FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-					if(!row){
-						return message.reply("\"**"+args[1]+"**\" is __NOT__ in my `DataBase`");
-					}
-					else {
-						sql.get(`DELETE FROM blocked_words WHERE word="${args[1]}"`).then(row => {
-							return message.reply("\"**"+args[1]+"**\" has been removed from my `DataBase`");
-						});
-					}
-				});
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-*/
-	
+	}	
 });
 
 
