@@ -245,8 +245,10 @@ bot.on('message', message => {
 	
 	
 	if(command==="restart"){
-		if(args[0]==="user"){
-			message.reply("Restarting **User** (`userBot.js`) branch... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
+		if(m.author.id===config.ownerID){
+			if(args[0]==="user"){
+				message.reply("Restarting **User** (`userBot.js`) branch... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
+			}
 		}
 	}
 });
