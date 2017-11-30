@@ -856,7 +856,7 @@ bot.on('message', message => {
 	
 	
 	if(command==="restart"){
-		if(m.author.id===config.ownerID){
+		if(m.id===config.ownerID){
 			if(args[0]==="admin"){
 				message.reply("Restarting **Admin** (`adminBot.js`) branch... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
 			}
