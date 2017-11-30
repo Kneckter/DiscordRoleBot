@@ -74,6 +74,8 @@ bot.on('message', message => {
 		if(args[0]==="mods") {
 			if(m.roles.has(ModR.id) || m.roles.has(AdminR.id)) {
 				cmds="--- ** COMMANDS FOR MODS ** ---\n"
+					+"`!info server`   \\\u00BB   to display server's info\n"
+					+"`!info @mention`   \\\u00BB   to display user's info\n"
 					+"`!roles`   \\\u00BB   ROLES multiple options\n"
 					+"`!role <ROLE-NAME> @mention`   \\\u00BB   to assign roles\n"
 					+"`!temprole`   \\\u00BB   ROLES multiple options\n"
