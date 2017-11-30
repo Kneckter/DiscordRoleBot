@@ -664,26 +664,26 @@ bot.on('message', message => {
 				let customed="no";
 				if(args[1]==="spam"){
 					customed="yes"; args[1]="SPAM:\n";
-					c.send("⚠ "+mentioned+", you are beign **WARNED** about: **SPAM**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
+					c.send("⚠ "+mentioned+", you are being **WARNED** about: **SPAM**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
 				}
 				if(args[1]==="foul"){
 					customed="yes"; args[1]="Foul Language!:\n";
-					c.send("⚠ "+mentioned+", you are beign **WARNED** about your **foul language**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
+					c.send("⚠ "+mentioned+", you are being **WARNED** about your **foul language**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
 				}
 				if(args[1]==="pics"){ 
 					customed="yes"; args[1]="Too many images:\n";
-					c.send("⚠ "+mentioned+", you are beign **WARNED** about your **images**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
+					c.send("⚠ "+mentioned+", you are being **WARNED** about your **images**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
 				}
 				if(args[1]==="troll" || args[1]==="trolling"){
 					customed="yes"; args[1]="Trolling:\n";
-					c.send("⚠ "+mentioned+", you are beign **WARNED** about your **TROLLS**, please turn it down and read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
+					c.send("⚠ "+mentioned+", you are being **WARNED** about your **TROLLS**, please turn it down and read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
 				}
 				if(args[1]==="adv"){
 					customed="yes"; args[1]="Advertising:\n";
-					c.send("⚠ "+mentioned+", you are beign **WARNED** about your **Advertising**, No Advertising is allowed! read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
+					c.send("⚠ "+mentioned+", you are being **WARNED** about your **Advertising**, No Advertising is allowed! read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
 				}
 				if(customed==="no"){
-					c.send("⚠ "+mentioned+", you are beign **WARNED** about: **"+damsg+'**');
+					c.send("⚠ "+mentioned+", you are being **WARNED** about: **"+damsg+'**');
 				}
 				embedMSG={
 					'color': 0xFF0000,
