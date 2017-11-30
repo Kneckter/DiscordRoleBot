@@ -784,6 +784,7 @@ bot.on('message', message => {
 			}
 			else {
 				console.log(timeStampSys+"[ADMIN] [KICK] \""+mentioned.username+"\" ("+mentioned.id+") was KICKED from guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
+				mentioned=message.mentions.users.first();
 				g.member(mentioned.id).kick().then(member=>{ 
 					c.send("⚠ "+mentioned+" has been __**kicked**__ from server for: "+damsg).catch(console.error);
 				}).catch(console.error);
@@ -812,7 +813,7 @@ bot.on('message', message => {
 	
 	
 	
-// ############################## KICK ##############################
+// ############################## BAN ##############################
 	if(command==="ban"){
 		let damsg; if(!args[1]){damsg="No-Reason-Given";}
 		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
@@ -825,6 +826,7 @@ bot.on('message', message => {
 			}
 			else {
 				console.log(timeStampSys+"[ADMIN] [BAN] \""+mentioned.username+"\" ("+mentioned.id+") was BANNED from guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
+				mentioned=message.mentions.users.first();
 				g.member(mentioned.id).ban({days: 7, reason: damsg}).then(member=>{ 
 					c.send("⚠ "+mentioned+" has been __**banned**__ from server for: "+damsg).catch(console.error);
 				}).catch(console.error);
