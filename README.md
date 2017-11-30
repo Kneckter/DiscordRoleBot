@@ -17,7 +17,7 @@ I wrote this long time ago for **SeattlePokeMaps**, but recently with the releas
 
 2) Discord.js (`npm install discord.js` « should be `ver 12.2+`) 
 
-3) SQLite (`npm install sql`) 
+3) SQLite (`npm install sqlite`) 
 
 4) Bot Token: https://discordapp.com/developers/applications/me  
 
@@ -32,7 +32,7 @@ I wrote this long time ago for **SeattlePokeMaps**, but recently with the releas
 
 2. Create a folder where you will put the bot
    * Open command prompt in this location and:
-   * `npm install discord.js` and then `npm install sql`
+   * `npm install discord.js` and then `npm install sqlite`
 
 3. Create an applicaiton and get the your bot's secret token, and application ID at:
    * https://discordapp.com/developers/applications/me 
