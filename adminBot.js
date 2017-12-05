@@ -488,7 +488,7 @@ bot.on('message', message => {
 		msg=message.content; args=msg.split(" ").slice(1);
 		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			message.delete();
+			// message.delete();
 			if(!args[0]){
 				return message.reply("usage: `!roles count`,\n or `!roles find <ROLE-NAME>`,\n or `!role <ROLE-NAME> @mention`,\n or `!role <ROLE-NAME> @mention remove`");
 			}
@@ -497,7 +497,11 @@ bot.on('message', message => {
 			}
 			if(args[0]==="find"){
 				let daRolesN=g.roles.map(r => r.name); let meantThis="";
-				let rName=g.roles.find('name', args[1]); 
+				
+				// ROLES WITH SPACES - NEW
+				let daRoles="";if(!args[2]){daRoles=args[1]}else{daRoles="";for(var x=1;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
+				
+				let rName=g.roles.find('name', daRoles); 
 				if(!rName){
 					let startWord=args[1].slice(0,3);
 					for (var i=0;i<daRolesN.length;i++){
@@ -527,24 +531,51 @@ bot.on('message', message => {
 					return message.reply("I couldn't find such role, please try again! syntax: `!roles find <ROLE-NAME>`");
 				}
 				else {
-					return message.reply("found it! who would you like to assign this role to? IE: `!role "+args[1]+" @mention`");
+					return message.reply("found it! who would you like to assign this role to? IE: `!role @mention "+daRoles+"`");
+				}
+			}
+			if(args[0]==="remove"){
+				let daRolesN=g.roles.map(r => r.name); let meantThis="";
+				
+				// ROLES WITH SPACES - NEW
+				let daRoles="";if(!args[3]){daRoles=args[2]}else{daRoles="";for(var x=2;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
+				
+				if(!mentioned){
+					return message.reply("please `@mention` a person you want me to remove `!role` from...");
+				}
+				if(!args[2]){
+					return message.reply("what role do you want me to remove from "+mentioned+" 🤔 ?");
+				}
+				
+				// CHECK ROLE EXIST
+				let rName=g.roles.find('name', daRoles); 
+				if(!rName){
+					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
+				}
+				
+				// CHECK MEMBER HAS ROLE
+				if(!g.members.get(mentioned.id).roles.has(rName.id)){
+					return c.send("Member doesnt have this role");
+				}
+				else {
+					mentioned=message.mentions.members.first();
+					mentioned.removeRole(rName).catch(console.error);
+					return c.send("⚠ "+mentioned+" have **lost** their role of: **"+daRoles+"** 😅 ");
 				}
 			}
 			if(args[0] && !mentioned){
 				return message.reply("please `@mention` a person you want me to give/remove `!role` to...");
 			}
 			else {
+				let daRoles="";if(!args[2]){daRoles=args[1]}else{daRoles="";for(var x=1;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
 				mentioned=message.mentions.members.first();
-				let rName=g.roles.find('name', args[0]); 
+				
+				let rName=g.roles.find('name', daRoles); 
 				if(!rName){
 					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
 				}
-				if(args[2]==="remove"){
-					mentioned.removeRole(rName).catch(console.error);
-					return c.send("⚠ "+mentioned+" have **lost** their role of: **"+args[0]+"** 😅 ");
-				}
 				mentioned.addRole(rName).catch(console.error);
-				return c.send("👍 "+mentioned+", has been given the role of: **"+args[0]+"**, enjoy! 🎉");
+				return c.send("👍 "+mentioned+", has been given the role of: **"+daRoles+"**, enjoy! 🎉");
 			}
 		}
 		else {
@@ -564,10 +595,13 @@ bot.on('message', message => {
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 			// message.delete();
 			if(!args[0]){
-				return message.reply("syntax:\n `!temprole <ROLE-NAME> @mention <DAYS>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
+				return message.reply("syntax:\n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
 			if(args[0] && !mentioned){
 				return message.reply("please `@mention` a person you want me to give/remove `!temprole` to...");
+			}
+			if(!args[1] && mentioned){
+				return message.reply("imcomplete data, please try: \n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
 			else {
 				let beginningOfTime=1511753994999; let dateMultiplier=86400000; mentioned=message.mentions.members.first(); 
@@ -609,15 +643,26 @@ bot.on('message', message => {
 					}).catch(console.error); return
 				}
 				
-				// CHECK ROLE EXIST
-				let rName=g.roles.find('name', args[0]);
-				if(!rName){
-					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
+				// CHECK AMOUNT OF DAYS WERE ADDED
+				if(!args[1]){
+					return message.reply("for how **many** days do you want "+mentioned+" to have this role?");
 				}
 				
-				// CHECK AMOUNT OF DAYS WERE ADDED
 				if(!args[2]){
-					return message.reply("for how **many** days do you want "+mentioned+" to have this role?");
+					return message.reply("what role do you want to assign to "+mentioned+"?");
+				}
+				
+				// ROLES WITH SPACES - NEW
+				let daRoles="";if(!args[3]){daRoles=args[2]}else{daRoles="";for(var x=2;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
+				
+				if(!parseInt(args[1])){
+					return message.reply("Error: second value has to be **X** number of days, IE:\n`!"+command+" @"+mentioned.user.username+" 90 "+daRoles+"`");
+				}
+				
+				// CHECK ROLE EXIST
+				let rName=g.roles.find('name', daRoles);
+				if(!rName){
+					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
 				}
 				
 				// ADD MEMBER TO DATASE, AND ADD THE ROLE TO MEMBER
@@ -625,15 +670,15 @@ bot.on('message', message => {
 					mentioned=message.mentions.members.first(); 
 					if (!row) {
 						let curDate=new Date(); let endDateVal=new Date(); let finalDateDisplay=new Date(); 
-						let finalDate=((args[2])*(dateMultiplier)); finalDate=((beginningOfTime)+(finalDate));
+						let finalDate=((args[1])*(dateMultiplier)); finalDate=((beginningOfTime)+(finalDate));
 						finalDateDisplay.setTime(finalDate); finalDateDisplay=(finalDateDisplay.getMonth()+1)+"/"+finalDateDisplay.getDate()+"/"+finalDateDisplay.getFullYear();
 						
 						sql.run("INSERT INTO temporary_roles (userID, temporaryRole, startDate, endDate, addedBy) VALUES (?, ?, ?, ?, ?)", 
-							[mentioned.id, args[0], curDate, finalDate, m.id]);
-						let theirRole=g.roles.find('name', args[0]);
+							[mentioned.id, daRoles, curDate, finalDate, m.id]);
+						let theirRole=g.roles.find('name', daRoles);
 						mentioned.addRole(theirRole).catch(console.error);
-						console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+mentioned.user.username+"\" ("+mentioned.id+") was given role: "+args[0]+" by: "+m.user.username+" ("+m.id+")");
-						return c.send("🎉 "+mentioned+" has been given a **temporary** role of: **"+args[0]+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
+						console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+mentioned.user.username+"\" ("+mentioned.id+") was given role: "+daRoles+" by: "+m.user.username+" ("+m.id+")");
+						return c.send("🎉 "+mentioned+" has been given a **temporary** role of: **"+daRoles+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
 					}
 					else {
 						return message.reply("this user already has a **temporary** role... try using `!temprole remove @"+mentioned.user.username+"` if you want to **change** their role.");
