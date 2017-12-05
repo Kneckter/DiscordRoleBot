@@ -488,9 +488,9 @@ bot.on('message', message => {
 		msg=message.content; args=msg.split(" ").slice(1);
 		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			// message.delete();
+			message.delete();
 			if(!args[0]){
-				return message.reply("usage: `!roles count`,\n or `!roles find <ROLE-NAME>`,\n or `!role <ROLE-NAME> @mention`,\n or `!role <ROLE-NAME> @mention remove`");
+				return message.reply("usage: `!roles count`,\n or `!roles find <ROLE-NAME>`,\n or `!role @mention <ROLE-NAME>`,\n or `!role remove @mention <ROLE-NAME>`");
 			}
 			if(args[0]==="count"){
 				return c.send("There are **"+g.roles.size+"** roles on this server");
@@ -593,7 +593,7 @@ bot.on('message', message => {
 		msg=message.content; args=msg.split(" ").slice(1);
 		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			// message.delete();
+			message.delete();
 			if(!args[0]){
 				return message.reply("syntax:\n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
