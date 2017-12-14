@@ -130,7 +130,8 @@ bot.on('message', message => {
 					sql.run("INSERT INTO tos_table (userID, userName, serverID, serverName, dateAccepted) VALUES (?,?,?,?,?)",
 						userID, userName, config.serverName, config.serverID, dateTS);
 					bot.guilds.get(config.serverID).members.get(userID).addRole(tosRole).catch(console.error);
-					return message.reply("Thank you for accepting our `Terms of Service` agreement, you have been given access to our server...\n.\n"
+					return message.reply("Thank you for accepting our `Terms of Service` agreement, you have been given "
+						+"`read`-access to more channels in our server...\n.\n"
 						+"Don't forget to read and accept our **Rules** too! (*if you haven't already*)");
 				}
 				else {
@@ -142,7 +143,8 @@ bot.on('message', message => {
 					sql.run("INSERT INTO tos_table (userID, userName, serverID, serverName, dateAccepted) VALUES (?,?,?,?,?)",
 						userID, userName, config.serverName, config.serverID, dateTS);
 					bot.guilds.get(config.serverID).members.get(userID).addRole(tosRole).catch(console.error);
-					return message.reply("Thank you for accepting our `Terms of Service` agreement, you have been given access to our server...\n.\n"
+					return message.reply("Thank you for accepting our `Terms of Service` agreement, you have been given "
+						+"`read`-access to more channels in our server...\n.\n"
 						+"Don't forget to read and accept our **Rules** too! (*if you haven't already*)");
 				});
 			});
@@ -153,11 +155,11 @@ bot.on('message', message => {
 					sql.run("INSERT INTO rules_table (userID, userName, serverID, serverName, dateAccepted) VALUES (?,?,?,?,?)",
 						userID, userName, config.serverName, config.serverID, dateTS);
 					bot.guilds.get(config.serverID).members.get(userID).addRole(rulesRole).catch(console.error);
-					return message.reply("Thank you for accepting our `Rules`, you have been given access to our server...\n.\n"
+					return message.reply("Thank you for accepting our `Rules`, you have been given `write`-access to our server...\n.\n"
 						+"Don't forget to read and accept our **Terms of Service** too! (*if you haven't already*)");
 				}
 				else {
-					return message.reply("You **already** accepted to our `Rules` agreement");
+					return message.reply("You **already** accepted to our `Rules`");
 				}
 			}).catch(() => {
 				console.error;
@@ -165,7 +167,7 @@ bot.on('message', message => {
 					sql.run("INSERT INTO rules_table (userID, userName, serverID, serverName, dateAccepted) VALUES (?,?,?,?,?)",
 						userID, userName, config.serverName, config.serverID, dateTS);
 					bot.guilds.get(config.serverID).members.get(userID).addRole(rulesRole).catch(console.error);
-					return message.reply("Thank you for accepting our `Rules`, you have been given access to our server...\n.\n"
+					return message.reply("Thank you for accepting our `Rules`, you have been given `write`-access to our server...\n.\n"
 						+"Don't forget to read and accept our **Terms of Service** too! (*if you haven't already*)");
 				});
 			});
