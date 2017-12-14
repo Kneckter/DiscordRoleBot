@@ -14,20 +14,14 @@ bot.on('ready', () => {
 
 
 // Jenner's test server 
-// config.serverID="271531913381019648"
+// config.serverID="271531913381019648";
 
-bot.on("guildMemberAdd", member => {
-	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
 
-	let guild=member.guild; let user=member.user;
-	
-	if(guild.id===config.serverID){
-	
-	bot.users.get(user.id).send(""
-		+"Hey "+user+", welcome to **"+config.serverName+"**'s Discord!"
+//
+// WELCOME MESSAGE - SECOND PART OF WELCOME MESSAGE, "HEY <USER>", IS FOUND BELOW, AT THE ONJOIN EVENT, SO IT CAN GRAB THE MEMBER'S INFO
+//
+const welcomeMSG=""
+		+", welcome to **"+config.serverName+"**'s Discord!"
 		+"\n.\n"
 		+"**FIRST:**\n"
 		+"Confirm your contact information with **Discord** so you can have read-access to our basic channels; "
@@ -41,11 +35,15 @@ bot.on("guildMemberAdd", member => {
 		+"**LASTLY:**\n"
 		+"Enjoy and have fun catching awesome **Pokémon** while using our services. Meet other trainers, "
 		+"try to attend our events, and **share** our website and information about our **Discord**\n"
-		+"-<@"+config.ownerID+">");
+		+"-<@"+config.ownerID+">";
 		
-	
-	bot.users.get(user.id).send(""
-		+"```diff\n- ### TERMS OF SERVICE ### -```"
+		
+		
+//
+// TOS MESSAGE
+//
+const tosMSG=""
+		+"```diff\n- - - TERMS OF SERVICE - - -```"
 		+"```md\n"
 		
 		+"[T1]: No spoofing.\n"
@@ -64,11 +62,15 @@ bot.on("guildMemberAdd", member => {
 		+"[T5]: No bigotry, hate speech, or excessive cursing.\n"
 		+"- Friendly banter is fine but do not cross the line by making personal attacks. Do not criticize or put down "
 		+"others for choosing different goals or strategies in the game.\n"
-		+"```");
+		+"```";
 		
-	
-	bot.users.get(user.id).send(""
-		+"```diff\n- ### RULES ### -```"
+		
+		
+//
+// RULES MESSAGE
+//
+const rulesMSG=""
+		+"```diff\n- - - RULES - - -```"
 		+"```md\n"
 		
 		+"[R1]: No spoofing.\n"
@@ -87,11 +89,39 @@ bot.on("guildMemberAdd", member => {
 		+"[R5]: No bigotry, hate speech, or excessive cursing.\n"
 		+"- Friendly banter is fine but do not cross the line by making personal attacks. Do not criticize or put down "
 		+"others for choosing different goals or strategies in the game."
-		+"```");
+		+"```";
 		
+		
+		
+		
+//
+// ONJOIN EVENT LISTENER
+//
+bot.on("guildMemberAdd", member => {
+	let CurrTime=new Date();
+	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
+	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
+	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
+
+	let guild=member.guild; let user=member.user;
+	
+	if(guild.id===config.serverID && config.welcomeDM==="yes"){
+		
+		// SEND WELCOME MESSAGE
+		bot.users.get(user.id).send("Hey "+user+welcomeMSG);
+		
+		if(config.tos.enabled==="yes"){
+			bot.users.get(user.id).send(tosMSG);
+		}
+		
+		if(config.rules.enabled==="yes"){
+			bot.users.get(user.id).send(rulesMSG);
+		}		
 	}
 	
 });
+
+
 
 // ##########################################################################
 // ############################## TEXT MESSAGE ##############################
@@ -118,7 +148,20 @@ bot.on('message', message => {
 	let args=msg.split(" ").slice(1);
 	
 	
-	// userID, userName, dateTS, 
+	
+// ############################## DISPLAY RULES ##############################
+	if(command==="rules"){
+		message.reply(rulesMSG);
+	}
+	
+	
+	
+// ############################### DISPLAY TOS ###############################
+	if(command==="tos"){
+		message.reply(tosMSG);
+	}
+	
+	
 	
 // ############################## AGREE COMMAND ##############################
 	if(command==="agree" || command==="accept"){
