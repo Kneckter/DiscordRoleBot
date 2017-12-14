@@ -57,6 +57,7 @@
 	
 	"banEvents": "no",
 	
+	"welcomeDM": "no",
 	"tos": {
 		"enabled": "no",
 		"channelID": "TOS-CHANNEL-ID",
