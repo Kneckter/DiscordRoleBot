@@ -1,6 +1,8 @@
 # VISIT THE WIKI FOR INFO, AND SCREENSHOTS
 
-Adding them right now, list of commands, functions, etc...
+For suggestions, concerns, troubleshoot, new features, updates, etc, join my discord server: 
+
+https://discord.gg/fJvqFGP
 
 
 # SimpleDiscordBot
