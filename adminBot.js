@@ -340,11 +340,22 @@ bot.on('message', message => {
 // ############################## STATS ##############################
 	if(command==="stats"){
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
+			let onlineM=g.members.filter(m=>m.presence.status==="online").size;
+			let idleM=g.members.filter(m=>m.presence.status==="idle").size;
+			let busyM=g.members.filter(m=>m.presence.status==="dnd").size;
+			let totalM=onlineM+idleM+busyM;
+			
 			embedMSG={
 				'color': 0x00FF00,
 				'title': '📊 SERVER STATS 📈',
-				'description': '**Online** members: **'+g.members.size+'**\n'
-					+'**Registered** members: **'+g.memberCount+'**'
+				'description': ''
+					+'🗨 **Online** members: **'+onlineM+'**\n'
+					+'📵 **Idle** members: **'+idleM+'**\n'
+					+'🔴 **Busy** members: **'+busyM+'**\n'
+					+'🚫 **Invisible** members: **'+g.members.filter(m=>m.presence.status==="offline").size+'**\n'
+					+'💚 **Total Online** members: **'+totalM+'**\n'
+					+'📋 **Total** members __Today__: **'+g.members.size+'**\n'
+					+'📜 **Registered** members: **'+g.memberCount+'**'
 			};
 			return c.send({embed: embedMSG}).catch(console.error);
 		}
