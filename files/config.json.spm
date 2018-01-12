@@ -58,12 +58,12 @@
 	"banEvents": "yes",
 	
 	"tos": {
-		"enabled": "yes",
+		"enabled": "no",
 		"channelID": "271531913381019648",
 		"roleNameToGive": "agreed-tos"
 	},
 	"rules": {
-		"enabled": "yes",
+		"enabled": "no",
 		"channelID": "294244582257065984",
 		"roleNameToGive": "agreed-rulz"
 	},
