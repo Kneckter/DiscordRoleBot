@@ -31,14 +31,23 @@ bot.on("guildBanAdd", (guild,user) => {
 		let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
 		let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
 
-		embedMSG={
-			'color': 0xFF0000,
-			'title': '"'+user.username+'" HAS BEEN BANNED',
-			'thumbnail': {'url': config.bannedImg},
-			'description': '**UserID**: '+user.id+'\n**UserTag**: '+user+'\n\n**On**: '+timeStamp
+		guild.fetchAuditLogs({limit: 1,type: 22})
+		.then(auditLog => {
+			let masterName=auditLog.entries.map(u=>u.executor.username),masterID=auditLog.entries.map(u=>u.executor.id),
+				minionName=auditLog.entries.map(u=>u.target.username),minionID=auditLog.entries.map(u=>u.target.id),
+				reason=auditLog.entries.map(u=>u.reason);reason="."+String(reason)+".";
+				if(reason===".."){reason="It was **not** __defined__"}else{reason=reason.slice(1,-1)}
+			embedMSG={
+				'color': 0xFF0000,
+				'title': '🔨 "'+minionName+'" HAS BEEN BANNED 🔨',
+				'thumbnail': {'url': config.bannedImg},
+				'description': '**UserID**: `'+minionID+'`\n**UserTag**: <@'+minionID+'>\n'
+					+'**Reason**: '+reason+'\n**By**: <@'+masterID+'>\n\n**On**: '+timeStamp
 			};
-		console.log(timeStampSys+"[ADMIN] [BANNED] \""+user.username+"\" ("+user.id+") was banned from "+guild.name);
-		return bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
+			console.log(timeStampSys+"[ADMIN] [BANNED] \""+minionName+"\" ("+minionID+") was banned from "+guild.name);
+			return bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
+		})
+		.catch(console.error)
 	}
 });
 
