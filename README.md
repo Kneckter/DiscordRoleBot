@@ -46,6 +46,8 @@ I wrote this long time ago for **SeattlePokeMaps**, but recently with the releas
      * Manage roles, it will only be able to manage roles that are **below** his role/permissions
    * Use the URL that page generates and go to it, and you will be asked to log into your discord, have **Admin** access in order to get the bot to join that server.
 
+5. Fill out the information needed in `files/config.json` (use example or spm as example), and launch each module!
+
 <hr />
 
 # LAUNCHING IT:
