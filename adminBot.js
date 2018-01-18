@@ -811,7 +811,7 @@ bot.on('message', message => {
 	
 	
 	
-// ############################## MUTE ##############################
+// ############################## UNMUTE ##############################
 	if(command==="unmute"){
 		let damsg; if(!args[1]){damsg="No-Reason-Given";}
 		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
@@ -820,7 +820,7 @@ bot.on('message', message => {
 
 			if(!mentioned){
 				message.delete();
-				return message.reply("please `@mention` a person you want me to `!mute`");
+				return message.reply("please `@mention` a person you want me to `!unmute`");
 			}
 			else {
 				message.delete();
@@ -901,15 +901,7 @@ bot.on('message', message => {
 					'thumbnail': {'url': config.bannedImg},
 					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
 				};
-				bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
-				embedMSG={
-					'color': 0xFF0000,
-					'title': '"'+mentioned.username+'" HAS BEEN BANNED',
-					'thumbnail': {'url': config.bannedImg},
-					'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-						+'**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-				};
-				return bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
+				return bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
 			}
 		}
 		else {
@@ -923,7 +915,7 @@ bot.on('message', message => {
 	if(command==="restart"){
 		if(m.id===config.ownerID){
 			if(args[0]==="admin"){
-				message.reply("Restarting **Admin** (`adminBot.js`) branch... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
+				message.reply("Restarting **Admin** (`adminBot.js`) module... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
 			}
 		}
 	}	
