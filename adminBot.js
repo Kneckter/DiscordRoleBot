@@ -612,16 +612,16 @@ bot.on('message', message => {
 		// ROLES ARE CASE SENSITIVE TO RESET MESSAGE AND ARGUMENTS
 		msg=message.content; args=msg.split(" ").slice(1);
 		
-		if(m.id===config.ownerID || m.id==="237260406144499712"){
+		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 			// message.delete();
 			if(!args[0]){
-				return message.reply("[`Ninja`] syntax:\n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
+				return message.reply("syntax:\n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
 			if(args[0] && !mentioned){
-				return message.reply("[`Ninja`] please `@mention` a person you want me to give/remove `!temprole` to...");
+				return message.reply("please `@mention` a person you want me to give/remove `!temprole` to...");
 			}
 			if(!args[1] && mentioned){
-				return message.reply("[`Ninja`] imcomplete data, please try: \n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
+				return message.reply("imcomplete data, please try: \n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
 			else {
 				let dateMultiplier=86400000; mentioned=message.mentions.members.first(); 
@@ -634,7 +634,7 @@ bot.on('message', message => {
 					mentioned=message.mentions.members.first(); 
 					sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
 						if(!row){
-							return message.reply("[`Ninja`] ⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
+							return message.reply("⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
 						}
 						else {
 							let startDateVal=new Date(); startDateVal.setTime(row.startDate); 
@@ -651,13 +651,13 @@ bot.on('message', message => {
 					mentioned=message.mentions.members.first(); 
 					sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
 						if(!row){
-							return message.reply("[`Ninja`] ⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
+							return message.reply("⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
 						}
 						else {
 							let theirRole=g.roles.find('name', row.temporaryRole);
 							mentioned.removeRole(theirRole).catch(console.error);
 							sql.get(`DELETE FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
-								return c.send("[`Ninja`] ⚠ "+mentioned+" have **lost** their role of: **"+theirRole.name+"** and has been removed from my `DataBase`");
+								return c.send("⚠ "+mentioned+" have **lost** their role of: **"+theirRole.name+"** and has been removed from my `DataBase`");
 							});
 						}
 					}).catch(console.error); return
@@ -665,24 +665,24 @@ bot.on('message', message => {
 				
 				// CHECK AMOUNT OF DAYS WERE ADDED
 				if(!args[1]){
-					return message.reply("[`Ninja`] for how **many** days do you want "+mentioned+" to have this role?");
+					return message.reply("for how **many** days do you want "+mentioned+" to have this role?");
 				}
 				
 				if(!args[2]){
-					return message.reply("[`Ninja`] what role do you want to assign to "+mentioned+"?");
+					return message.reply("what role do you want to assign to "+mentioned+"?");
 				}
 				
 				// ROLES WITH SPACES - NEW
 				let daRoles="";if(!args[3]){daRoles=args[2]}else{daRoles="";for(var x=2;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
 				
 				if(!parseInt(args[1])){
-					return message.reply("[`Ninja`] Error: second value has to be **X** number of days, IE:\n`!"+command+" @"+mentioned.user.username+" 90 "+daRoles+"`");
+					return message.reply("Error: second value has to be **X** number of days, IE:\n`!"+command+" @"+mentioned.user.username+" 90 "+daRoles+"`");
 				}
 				
 				// CHECK ROLE EXIST
 				let rName=g.roles.find('name', daRoles);
 				if(!rName){
-					return message.reply("[`Ninja`] I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
+					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
 				}
 				
 				// ADD MEMBER TO DATASE, AND ADD THE ROLE TO MEMBER
@@ -700,17 +700,17 @@ bot.on('message', message => {
 						let theirRole=g.roles.find('name', daRoles);
 						mentioned.addRole(theirRole).catch(console.error);
 						console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+mentioned.user.username+"\" ("+mentioned.id+") was given role: "+daRoles+" by: "+m.user.username+" ("+m.id+")");
-						return c.send("[`Ninja`] 🎉 "+mentioned+" has been given a **temporary** role of: **"+daRoles+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
+						return c.send("🎉 "+mentioned+" has been given a **temporary** role of: **"+daRoles+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
 					}
 					else {
-						return message.reply("[`Ninja`] this user already has a **temporary** role... try using `!temprole remove @"+mentioned.user.username+"` if you want to **change** their role.");
+						return message.reply("this user already has a **temporary** role... try using `!temprole remove @"+mentioned.user.username+"` if you want to **change** their role.");
 					}
 				}).catch(console.error);
 			}
 		}
 		else {
 			message.delete();
-			return message.reply("[`Ninja`] you are **NOT** allowed to use this command!").catch(console.error); 
+			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
 		}
 	}
 	
