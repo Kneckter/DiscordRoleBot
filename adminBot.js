@@ -797,7 +797,7 @@ bot.on('message', message => {
 						'title': '"'+mentioned.username+'" HAS BEEN MUTED',
 						'thumbnail': {'url': config.mutedImg},
 						'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-							+'**Channel**: <#'+c.id+'>\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
+							+'**inChannel**: <#'+c.id+'>\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
 					};
 					bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
 					console.log(timeStampSys+"[ADMIN] [MUTE] \""+mentioned.username+"\" ("+mentioned.id+") was MUTED in guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
@@ -853,7 +853,7 @@ bot.on('message', message => {
 				console.log(timeStampSys+"[ADMIN] [KICK] \""+mentioned.username+"\" ("+mentioned.id+") was KICKED from guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
 				mentioned=message.mentions.users.first();
 				g.member(mentioned.id).kick().then(member=>{ 
-					c.send("⚠ "+mentioned+" has been __**kicked**__ from server for: "+damsg).catch(console.error);
+					c.send("⚠ "+mentioned+" has been __**kicked**__ from server for: **"+damsg+"**").catch(console.error);
 				}).catch(console.error);
 				embedMSG={
 					'color': 0xFF0000,
@@ -889,13 +889,13 @@ bot.on('message', message => {
 
 			if(!mentioned){
 				message.delete();
-				return message.reply("please `@mention` a person you want me to `!kick`");
+				return message.reply("please `@mention` a person you want me to `!ban`");
 			}
 			else {
 				console.log(timeStampSys+"[ADMIN] [BAN] \""+mentioned.username+"\" ("+mentioned.id+") was BANNED from guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
 				mentioned=message.mentions.users.first();
 				g.member(mentioned.id).ban({days: 7, reason: damsg}).then(member=>{ 
-					c.send("⚠ "+mentioned+" has been __**banned**__ from server for: "+damsg).catch(console.error);
+					c.send("⚠ "+mentioned+" has been __**banned**__ from server for: **"+damsg+"**").catch(console.error);
 				}).catch(console.error);
 				embedMSG={
 					'color': 0xFF0000,
