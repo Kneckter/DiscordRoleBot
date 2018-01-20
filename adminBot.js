@@ -606,7 +606,7 @@ bot.on('message', message => {
 	
 	
 	
-// ############################## ROLES ##############################
+// ############################## TEMPORARY ROLES ##############################
 	if(command.startsWith("temprole") || command==="tr" || command==="trole"){
 		
 		// ROLES ARE CASE SENSITIVE TO RESET MESSAGE AND ARGUMENTS
@@ -641,7 +641,7 @@ bot.on('message', message => {
 							startDateVal=(startDateVal.getMonth()+1)+"/"+startDateVal.getDate()+"/"+startDateVal.getFullYear();
 							let endDateVal=new Date(); endDateVal.setTime(row.endDate); 
 							finalDate=(endDateVal.getMonth()+1)+"/"+endDateVal.getDate()+"/"+endDateVal.getFullYear();
-							return c.send("[`Ninja`] ✅ "+mentioned+" will lose the role: **"+row.temporaryRole+"** on: `"+finalDate+"`! They were added by: <@"+row.addedBy+"> on: `"+startDateVal+"`");
+							return c.send("✅ "+mentioned+" will lose the role: **"+row.temporaryRole+"** on: `"+finalDate+"`! They were added by: <@"+row.addedBy+"> on: `"+startDateVal+"`");
 						}
 					}).catch(console.error); return
 				}
