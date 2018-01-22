@@ -40,6 +40,56 @@ bot.on('message', message => {
 	
 	
 	
+// ############################## AUTO LEVEL ROLES ##############################
+	if(message.channel.id===config.levelRolesChannelID){
+		// LEVEL ROLE NAME PREFIX (INCLUDE SPACE OR ":" OR "-")
+		let lvlRolesPrefix="Level ";
+		
+		// AVAILABLE LEVEL ROLES
+		let lvlRoles=["25-29","30","31","32","33","34","35","36","37","38","39","40"];
+		
+		// VARIABLES
+		let newRole=""; let oldRole="";
+		
+		// ERROR MESSAGE
+		let levelNotFound="\n⚠ Level **NOT** found! Please make sure you type **ONLY** your level, and nothing else, along with your screenshot.\n"
+				+" » Exact levels on file: `"+lvlRoles+"`\n**[WARNING]**: __DO NOT__ abuse this function (assigning your own **Level**-role)... "
+				+"screenshots and levels **are still** being __verified__ by staff and moderators; abusers will **lose** their rights to this function, the channel, and level assignment";
+		
+		// IGNORE PICTURES, MESSAGES FROM BOT, AND COMMAND MESSAGES
+		if(message.content && message.member.id!==config.botID && !message.content.startsWith(config.cmdPrefix)){
+			
+			// REMOVE ANY PREVIOUS LEVEL ROLE
+			for(var availbleRole=0;availbleRole<lvlRoles.length;availbleRole++){
+				oldRole=message.guild.roles.find("name", lvlRolesPrefix+lvlRoles[availbleRole]);
+				if(oldRole && message.member.roles.has(oldRole.id)){
+					// message.reply("you had previous role... attempting to removed your **Level "+lvlRoles[availbleRole]+"** role");
+					message.member.removeRole(oldRole).then(()=>{
+						newRole=message.guild.roles.find("name", lvlRolesPrefix+message.content);
+						if(newRole){message.member.addRole(newRole)}
+					}).catch(console.error);
+				}
+			}
+			// CHECK IF LEVEL ROLE EXIST WHILE MAKING SURE USER'S INPUT IS JUST DIGIT/NUMBER
+			for(var userInput=0;userInput<lvlRoles.length;userInput++){
+				if(message.content===lvlRoles[userInput]){
+					newRole=message.guild.roles.find("name", lvlRolesPrefix+message.content);
+				}
+			}
+			
+			// NEW ROLE IS VALID, ATTEMPT TO ADD IT
+			if(newRole){
+				message.member.addRole(newRole).catch(console.error);
+				return message.channel.send("🎉 Congratulations to: "+message.member+"! They are now **Level: "+message.content+"** 🎉 ")
+			}
+			
+			// PICTURE IS FINE, BUT TEXT MESSAGE IS NOT A NUMBER - COULD BE CHAT - OR ISNOT ONE OF THE VALID NUMBERS... WARN THEM!
+			return message.reply(levelNotFound)
+		}
+	}
+	
+	
+	
 	// MAKE SURE ITS A COMMAND
 	if(!message.content.startsWith(config.cmdPrefix)) { return }
 	
@@ -56,16 +106,6 @@ bot.on('message', message => {
 	
 	// GET ARGUMENTS
 	let args=msg.split(" ").slice(1);
-	
-	
-	
-// ######################### test #############################
-	if(command==="test") {
-		let damsg; if(!args[0]){damsg="No-Reason-Given";}
-		else {damsg="";} for (var x=0; x<args.length; x++) { damsg += " "+args[x]; }		
-		
-		c.send(damsg).catch(console.error);
-	}
 	
 	
 	
