@@ -54,6 +54,7 @@
 	"mainChannelID": "MAIN-CHAT-CHANNEL-ID",
 	"modlogChannelID": "MOD-LOG-CHANNEL-ID",
 	"botsupportChannelID": "BOT-CHANNEL-ID",
+	"levelRolesChannelID": "USER-LEVELS-CHANNEL-ID",
 	
 	"banEvents": "no",
 	
