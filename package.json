@@ -1,6 +1,6 @@
 {
   "name": "SimpleDiscordBot",
-  "version": "2.2.1",
+  "version": "2.2.5",
   "description": "A simple discord bot aka help bot for PokemonGo discord servers",
   "main": "admin.js",
   "scripts": {
