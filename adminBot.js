@@ -717,10 +717,7 @@ bot.on('message', message => {
 	
 	
 // ############################## WARNING ##############################
-	if(command==="warn"){ 
-		let damsg; if(!args[1]){damsg="No-Reason-Given... but watch your recent actions or chat";}
-		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
-		
+	if(command==="warn"){
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 			if(!mentioned){
 				message.delete();
@@ -728,35 +725,18 @@ bot.on('message', message => {
 			}
 			else {
 				message.delete();
-				let customed="no";
-				if(args[1]==="spam"){
-					customed="yes"; args[1]="SPAM:\n";
-					c.send("⚠ "+mentioned+", you are being **WARNED** about: **SPAM**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
-				}
-				if(args[1]==="foul"){
-					customed="yes"; args[1]="Foul Language!:\n";
-					c.send("⚠ "+mentioned+", you are being **WARNED** about your **foul language**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
-				}
-				if(args[1]==="pics"){ 
-					customed="yes"; args[1]="Too many images:\n";
-					c.send("⚠ "+mentioned+", you are being **WARNED** about your **images**, please read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
-				}
-				if(args[1]==="troll" || args[1]==="trolling"){
-					customed="yes"; args[1]="Trolling:\n";
-					c.send("⚠ "+mentioned+", you are being **WARNED** about your **TROLLS**, please turn it down and read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
-				}
-				if(args[1]==="adv"){
-					customed="yes"; args[1]="Advertising:\n";
-					c.send("⚠ "+mentioned+", you are being **WARNED** about your **Advertising**, No Advertising is allowed! read our \\\u00BB <#"+config.rulesChannelID+"> \\\u00AB to avoid a **MUTE**").catch(console.error);
-				}
-				if(customed==="no"){
-					c.send("⚠ "+mentioned+", you are being **WARNED** about: **"+damsg+'**');
-				}
+				
+				// IMPROVED WAY TO GRAB REASONS:
+					let msgReasons;if(message.content.indexOf(" ")===-1){return}
+					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
+					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
+					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
+				
 				embedMSG={
 					'color': 0xFF0000,
 					'title': '⚠ THIS IS A WARNING ⚠',
 					'thumbnail': {'url': config.warningImg},
-					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
+					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
 				};
 				bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
 				embedMSG={
@@ -764,8 +744,9 @@ bot.on('message', message => {
 					'title': '⚠ "'+mentioned.username+'" WAS WARNED',
 					'thumbnail': {'url': config.warningImg},
 					'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-						+'**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
+						+'**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
 				};
+				c.send("⚠ "+mentioned+", you are being **WARNED** about: **"+msgReasons+'**');
 				return bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
 			}
 		}
@@ -779,17 +760,21 @@ bot.on('message', message => {
 	
 // ############################## MUTE ##############################
 	if(command==="mute"){
-		let damsg; if(!args[1]){damsg="No-Reason-Given";}
-		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
-		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-
 			if(!mentioned){
 				message.delete();
 				return message.reply("please `@mention` a person you want me to `!mute`");
 			}
 			else {
 				message.delete();
+				
+				// IMPROVED WAY TO GRAB REASONS:
+					let msgReasons;if(message.content.indexOf(" ")===-1){return}
+					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
+					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
+					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
+				
+				mentioned=message.mentions.users.first();
 				c.overwritePermissions(mentioned, {SEND_MESSAGES: false})
 				.then(() => {
 					embedMSG={
@@ -797,11 +782,11 @@ bot.on('message', message => {
 						'title': '🤐 "'+mentioned.username+'" WAS MUTED',
 						'thumbnail': {'url': config.mutedImg},
 						'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-							+'**inChannel**: <#'+c.id+'>\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
+							+'**Channel**: <#'+c.id+'>\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
 					};
 					bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
-					console.log(timeStampSys+"[ADMIN] [MUTE] \""+mentioned.username+"\" ("+mentioned.id+") was MUTED in guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
-					return c.send("⚠ "+mentioned+" has been 🤐 **MUTED** 🤐 for: **"+damsg+'**');
+					console.log(timeStampSys+"[ADMIN] [MUTE] \""+mentioned.username+"\" ("+mentioned.id+") was MUTED in guild: "+g.name+", channel: #"+c.name+" due to: "+msgReasons);
+					return c.send("⚠ "+mentioned+" has been 🤐 **MUTED** for: **"+msgReasons+'**');
 				}).catch(console.error);
 			}
 		}
@@ -813,11 +798,8 @@ bot.on('message', message => {
 	
 	
 	
-// ############################## UNMUTE ##############################
+// ############################## MUTE ##############################
 	if(command==="unmute"){
-		let damsg; if(!args[1]){damsg="No-Reason-Given";}
-		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
-		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 
 			if(!mentioned){
@@ -826,8 +808,9 @@ bot.on('message', message => {
 			}
 			else {
 				message.delete();
-				c.permissionOverwrites.get(mentioned.id).delete();
-				c.send(mentioned+" can now **type/send** messages again 👍 ... but **don't** abuse it!");
+				mentioned=message.mentions.users.first();
+				c.permissionOverwrites.get(mentioned.id).delete().catch(console.error);
+				return c.send(mentioned+" can now **type/send** messages again 👍 ... but **don't** abuse it!");
 			}
 		}
 		else {
@@ -840,9 +823,6 @@ bot.on('message', message => {
 	
 // ############################## KICK ##############################
 	if(command==="kick"){
-		let damsg; if(!args[1]){damsg="No-Reason-Given";}
-		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
-		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 
 			if(!mentioned){
@@ -850,26 +830,34 @@ bot.on('message', message => {
 				return message.reply("please `@mention` a person you want me to `!kick`");
 			}
 			else {
-				console.log(timeStampSys+"[ADMIN] [KICK] \""+mentioned.username+"\" ("+mentioned.id+") was KICKED from guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
+				message.delete();
+				
+				// IMPROVED WAY TO GRAB REASONS:
+					let msgReasons;if(message.content.indexOf(" ")===-1){return}
+					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
+					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
+					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
+				
 				mentioned=message.mentions.users.first();
-				g.member(mentioned.id).kick().then(member=>{ 
-					c.send("⚠ "+mentioned+" has been __**kicked**__ from server for: **"+damsg+"**").catch(console.error);
-				}).catch(console.error);
+				console.log(timeStampSys+"[ADMIN] [KICK] \""+mentioned.username+"\" ("+mentioned.id+") was KICKED from guild: "+g.name+", channel: #"+c.name+" due to: "+msgReasons);
+				c.send("⚠ "+mentioned+" has been 👢 __**kicked**__ from server for: **"+msgReasons+"**").catch(console.error);
 				embedMSG={
 					'color': 0xFF0000,
 					'title': 'YOU HAVE BEEN KICKED',
 					'thumbnail': {'url': config.kickedImg},
-					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
+					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
 				};
-				bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
-				embedMSG={
-					'color': 0xFF0000,
-					'title': '👢 "'+mentioned.username+'" WAS KICKED',
-					'thumbnail': {'url': config.kickedImg},
-					'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-						+'**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-				};
-				return bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
+				bot.users.get(mentioned.id).send({embed: embedMSG}).then(()=>{
+					embedMSG={
+						'color': 0xFF0000,
+						'title': '👢 "'+mentioned.username+'" WAS KICKED',
+						'thumbnail': {'url': config.kickedImg},
+						'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
+							+'**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
+					};
+					bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
+					return g.member(mentioned.id).kick().catch(console.error);
+				}).catch(console.error);
 			}
 		}
 		else {
@@ -882,9 +870,6 @@ bot.on('message', message => {
 	
 // ############################## BAN ##############################
 	if(command==="ban"){
-		let damsg; if(!args[1]){damsg="No-Reason-Given";}
-		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
-		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 
 			if(!mentioned){
@@ -892,18 +877,24 @@ bot.on('message', message => {
 				return message.reply("please `@mention` a person you want me to `!ban`");
 			}
 			else {
-				console.log(timeStampSys+"[ADMIN] [BAN] \""+mentioned.username+"\" ("+mentioned.id+") was BANNED from guild: "+g.name+", channel: #"+c.name+" due to: "+damsg);
-				mentioned=message.mentions.users.first();
-				g.member(mentioned.id).ban({days: 7, reason: damsg}).then(member=>{ 
-					c.send("⚠ "+mentioned+" has been __**banned**__ from server for: **"+damsg+"**").catch(console.error);
-				}).catch(console.error);
+				
+				// IMPROVED WAY TO GRAB REASONS:
+					let msgReasons;if(message.content.indexOf(" ")===-1){return}
+					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
+					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
+					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
+				
+				console.log(timeStampSys+"[ADMIN] [BAN] \""+mentioned.username+"\" ("+mentioned.id+") was BANNED from guild: "+g.name+", channel: #"+c.name+" due to: "+msgReasons);
+				c.send("⛔ "+mentioned+" has been __**banned**__ 🔨 from server for: **"+msgReasons+"**").catch(console.error);
 				embedMSG={
 					'color': 0xFF0000,
 					'title': 'YOU HAVE BEEN BANNED',
 					'thumbnail': {'url': config.bannedImg},
-					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
+					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
 				};
-				return bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
+				bot.users.get(mentioned.id).send({embed: embedMSG}).then(()=>{
+					return g.member(mentioned.id).ban({days: 7, reason: msgReasons}).catch(console.error);
+				}).catch(console.error);
 			}
 		}
 		else {
