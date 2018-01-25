@@ -39,7 +39,7 @@ bot.on("guildBanAdd", (guild,user) => {
 				if(reason===".."){reason="It was **not** __defined__"}else{reason=reason.slice(1,-1)}
 			embedMSG={
 				'color': 0xFF0000,
-				'title': '🔨 "'+minionName+'" HAS BEEN BANNED 🔨',
+				'title': '🔨 "'+minionName+'" WAS BANNED',
 				'thumbnail': {'url': config.bannedImg},
 				'description': '**UserID**: `'+minionID+'`\n**UserTag**: <@'+minionID+'>\n'
 					+'**Reason**: '+reason+'\n**By**: <@'+masterID+'>\n\n**On**: '+timeStamp
@@ -761,7 +761,7 @@ bot.on('message', message => {
 				bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
 				embedMSG={
 					'color': 0xFF0000,
-					'title': '"'+mentioned.username+'" HAS BEEN WARNED',
+					'title': '⚠ "'+mentioned.username+'" WAS WARNED',
 					'thumbnail': {'url': config.warningImg},
 					'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
 						+'**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
@@ -794,7 +794,7 @@ bot.on('message', message => {
 				.then(() => {
 					embedMSG={
 						'color': 0xFF0000,
-						'title': '"'+mentioned.username+'" HAS BEEN MUTED',
+						'title': '🤐 "'+mentioned.username+'" WAS MUTED',
 						'thumbnail': {'url': config.mutedImg},
 						'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
 							+'**inChannel**: <#'+c.id+'>\n**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
@@ -864,7 +864,7 @@ bot.on('message', message => {
 				bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
 				embedMSG={
 					'color': 0xFF0000,
-					'title': '"'+mentioned.username+'" HAS BEEN KICKED',
+					'title': '👢 "'+mentioned.username+'" WAS KICKED',
 					'thumbnail': {'url': config.kickedImg},
 					'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
 						+'**Reason**: '+damsg+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
