@@ -144,8 +144,8 @@ bot.on('message', message => {
 	let args=msg.split(" ").slice(1); skip="no";
 	
 	// GET ROLES FROM CONFIG
-	let AdminR=g.roles.find("name", config.adminRoleName); if(!AdminR){ AdminR.id=111111111111111111; console.info("[ERROR] [CONFIG] I could not find role: "+config.adminRoleName); }
-	let ModR=g.roles.find("name", config.modRoleName); if(!ModR){ ModR.id=111111111111111111; console.info("[ERROR] [CONFIG] I could not find role: "+config.modRoleName); }
+	let AdminR=g.roles.find("name", config.adminRoleName); if(!AdminR){ AdminR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find role: "+config.adminRoleName); }
+	let ModR=g.roles.find("name", config.modRoleName); if(!ModR){ ModR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find role: "+config.modRoleName); }
 	
 
 
