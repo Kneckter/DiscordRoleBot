@@ -23,7 +23,7 @@ I wrote this long time ago for **SeattlePokeMaps**, but recently with the releas
 
 4) Bot Token: https://discordapp.com/developers/applications/me  
 
-5) And assign bot access to your server: https://discordapp.com/developers/tools/permissions-calculator
+5) And assign bot access to your server: https://finitereality.github.io/permissions/?v=0
 -with **Admin** role access, or... permissions to manage roles, channels, and messages... it's your bot, so it is safe!
 
 <hr />
