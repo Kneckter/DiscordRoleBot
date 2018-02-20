@@ -117,10 +117,9 @@ bot.on('message', message => {
 					+"`!info server`   \\\u00BB   to display server's info\n"
 					+"`!info @mention`   \\\u00BB   to display user's info\n"
 					+"`!roles`   \\\u00BB   ROLES multiple options\n"
-					+"`!role <ROLE-NAME> @mention`   \\\u00BB   to assign roles\n"
+					+"`!role @mention <ROLE-NAME>`   \\\u00BB   to assign roles\n"
 					+"`!temprole`   \\\u00BB   ROLES multiple options\n"
 					+"`!temprole <ROLE-NAME> @mention <DAYS>`   \\\u00BB   to assign temporary roles\n"
-					+"`!warn @mention spam/foul/troll/pics/adv`   \\\u00BB   preset warning or:\n"
 					+"`!warn @mention REASON`   \\\u00BB   for custom reasons\n"
 					+"`!mute @mention REASON`   \\\u00BB   to mute an user\n"
 					+"`!unmute @mention`   \\\u00BB   to unmute an user\n"
@@ -135,21 +134,22 @@ bot.on('message', message => {
 		if(c.id!==config.botsupportChannelID){
 			return message.reply("this command can only be used at: <#"+config.botsupportChannelID+">");
 		}
-		if(!args[0]) {
-			cmds="`!map`   \\\u00BB   a link to our **Live Web Map** [much cooler]\n"
-				+"`!raids`   \\\u00BB   a link to our **Raids Web Map** [with RSVP]\n"
-				+"`!invite`   \\\u00BB   for our **invite** link and code\n"
-				+"`!spmplus`/`!patreon`   \\\u00BB   for a link to our **Patreon** [to subscribe]\n"
-				+"`!donate`/`!paypal`   \\\u00BB   for a link to our **PayPal** [to show extra support]\n"
-				+"`!hoods`   \\\u00BB   for a map with **Neighborhoods**\n"
-				+"`!coverage`/`!zones`   \\\u00BB   for a map of our **coverage/zones**\n.\n"
-				+"... for more commands, type:\n"
+		if(!args[0]) { 
+			cmds="";
+			if(config.mapMain.enabled==="yes"){ cmds+="`!map`   \\\u00BB   a link to our **Live Web Map** [much cooler]\n" }
+			if(config.mapRaids.enabled==="yes"){ cmds+="`!raids`   \\\u00BB   a link to our **Raids Web Map** [with RSVP]\n" }
+			cmds+="`!invite`   \\\u00BB   for our **invite** link and code\n";
+			if(config.patreon.enabled==="yes"){ cmds+="`!subscribe`/`!patreon`   \\\u00BB   for a link to our **Patreon** [to subscribe]\n" }
+			if(config.paypal.enabled==="yes"){ cmds+="`!donate`/`!paypal`   \\\u00BB   for a link to our **PayPal** [to show extra support]\n" }
+			if(config.mapHoods.enabled==="yes"){ cmds+="`!hoods`   \\\u00BB   for a map with **Neighborhoods**\n" }
+			if(config.mapCoverage.enabled==="yes"){ cmds+="`!coverage`/`!zones`   \\\u00BB   for a map of our **coverage/zones**\n.\n" }
+			cmds+="... for more commands, type:\n"
 				+"`!commands devs`, `!commands mods`";
 		}
 		if(args[0]==="devs") {
 			cmds="--- ** COMMANDS FOR DEVs ** ---\n"
-				+"`!coverage`/`!zones`   \\\u00BB   for a map of our **scanned area**\n"
-				+"`!hash`   \\\u00BB   for **hashing** server status link\n"
+			if(config.mapZones.enabled==="yes"){ cmds+="`!coverage`/`!zones`   \\\u00BB   for a map of our **scanned area**\n"}
+				cmds+="`!hash`   \\\u00BB   for **hashing** server status link\n"
 				+"`!ptc`   \\\u00BB   for **PokemonTrainersClub** server status link\n"
 				+"`!geofence`   \\\u00BB   for __Jenner__'s **GeoFence Generator**\n"
 				+"`!geojson`   \\\u00BB   Geofence generator - load/save/modify geofence `.json`\n"
