@@ -4,6 +4,8 @@ For suggestions, concerns, troubleshoot, new features, updates, etc, join my dis
 
 https://discord.gg/fJvqFGP
 
+# NOTICE
+This bot has been discontinued since Jan 29, 2018 - as far as adding new features, commands, etc; I am still offering support and updates on script, commands, etc... version `2.0` is coming soon with the release of "`PokéHelp`"[bot]... lots of new features, command-line management/settings, etc
 
 # SimpleDiscordBot
 
