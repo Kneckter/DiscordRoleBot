@@ -518,31 +518,31 @@ bot.on('message', message => {
 				return c.send("There are **"+g.roles.size+"** roles on this server");
 			}
 			if(args[0]==="find"){
-				let daRolesN=g.roles.map(r => r.name); let meantThis="";
+				let daRolesN=g.roles.map(r => r.name);let daRolesNl=g.roles.map(r => r.name.toLowerCase()); let meantThis="";
 				
 				// ROLES WITH SPACES - NEW
 				let daRoles="";if(!args[2]){daRoles=args[1]}else{daRoles="";for(var x=1;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
 				
 				let rName=g.roles.find('name', daRoles); 
 				if(!rName){
-					let startWord=args[1].slice(0,3);
+					let startWord=args[1].slice(0,3); startWord=startWord.toLowerCase();
 					for (var i=0;i<daRolesN.length;i++){
-						if(daRolesN[i].startsWith(startWord)){
+						if(daRolesNl[i].startsWith(startWord)){
 							meantThis += daRolesN[i] +", ";
 						}
 					}
 					if(!meantThis){
-						startWord=args[1].slice(0,2); meantThis="";
+						startWord=args[1].slice(0,2).toLowerCase(); meantThis="";
 						for (var i=0;i<daRolesN.length;i++){
-							if(daRolesN[i].startsWith(startWord)){
+							if(daRolesNl[i].startsWith(startWord)){
 								meantThis += daRolesN[i] +", ";
 							}
 						}
 					}
 					if(!meantThis){
-						startWord=args[1].slice(0,1); meantThis="";
+						startWord=args[1].slice(0,1).toLowerCase(); meantThis="";
 						for (var i=0;i<daRolesN.length;i++){
-							if(daRolesN[i].startsWith(startWord)){
+							if(daRolesNl[i].startsWith(startWord)){
 								meantThis += daRolesN[i] +", ";
 							}
 						}
