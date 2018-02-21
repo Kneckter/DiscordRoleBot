@@ -908,7 +908,7 @@ bot.on('message', message => {
 	
 	
 	if(command==="discord"){
-		channel.send("**Discord** API [`discord.js`] __version__: "+Discord.version);
+		c.send("**Discord** API [`discord.js`] __version__: "+Discord.version);
 	}
 	
 	
