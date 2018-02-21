@@ -907,6 +907,12 @@ bot.on('message', message => {
 	
 	
 	
+	if(command==="discord"){
+		channel.send("**Discord** API [`discord.js`] __version__: "+Discord.version);
+	}
+	
+	
+	
 	if(command==="restart"){
 		if(m.id===config.ownerID){
 			if(args[0]==="admin"){
