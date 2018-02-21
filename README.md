@@ -19,7 +19,7 @@ I wrote this long time ago for **SeattlePokeMaps**, but recently with the releas
 
 1) Node.js (https://nodejs.org/en/download/ `ver 8.4+`)
 
-2) Discord.js (`npm install discord.js` « should be `ver 12.2+`) 
+2) Discord.js (`npm install discord.js` « should be `ver 11.3+`) 
 
 3) SQLite (`npm install sqlite`) 
 
