@@ -18,7 +18,7 @@
 	"paypal": { 
 		"enabled": "no", 
 		"url": "PAYPAL-URL-LINK",
-		"img": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/LogoOutLine.png"
+		"img": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/paypal_icon.jpg"
 	},
 	
 	"mainChannelID": "MAIN-CHAT-CHANNEL-ID",
