@@ -1,13 +1,11 @@
 const Discord=require('discord.js');
-const sql = require("sqlite");
-sql.open("./files/dataBase.sqlite");
-const config=require('./files/config.json');
 const bot=new Discord.Client();
+const config=require('./config.json');
+const sql = require("sqlite");
+sql.open("./dataBase.sqlite");
 
 // COMMON VARIABLES
 var embedMSG=""; var skip=""; var msg1=""; var msg2="";
-
-
 
 bot.on('ready', () => {
 	let CurrTime=new Date();
@@ -17,66 +15,11 @@ bot.on('ready', () => {
 	console.info(timeStampSys+'-- DISCORD HELPBOT [ADMIN] IS READY --');console.log(console.error);
 });
 
-
-
 // ##########################################################################
 // ############################# SERVER LISTNER #############################
 // ##########################################################################
-bot.on("guildBanAdd", (guild,user) => {
-	
-	// POST BAN EVENTS TO MODLOG; WHEN USER BANS MANUALLY INSTEAD OF THROUGH COMMANDS
-	if(config.banEvents==="yes") {
-		setTimeout(function(){
-			let CurrTime=new Date();
-			let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-			let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-			let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
 
-			guild.fetchAuditLogs({limit: 1,type: 22})
-			.then(auditLog => {
-				let masterName=auditLog.entries.map(u=>u.executor.username),masterID=auditLog.entries.map(u=>u.executor.id),
-					minionName=auditLog.entries.map(u=>u.target.username),minionID=auditLog.entries.map(u=>u.target.id),
-					reason=auditLog.entries.map(u=>u.reason);reason="."+String(reason)+".";
-					if(reason===".."){reason="It was **not** __defined__"}else{reason=reason.slice(1,-1)}
-				embedMSG={
-					'color': 0xFF0000,
-					'title': '🔨 "'+minionName+'" WAS BANNED',
-					'thumbnail': {'url': config.bannedImg},
-					'description': '**UserID**: `'+minionID+'`\n**UserTag**: <@'+minionID+'>\n'
-						+'**Reason**: '+reason+'\n**By**: <@'+masterID+'>\n\n**On**: '+timeStamp
-				};
-				console.log(timeStampSys+"[ADMIN] [BANNED] \""+minionName+"\" ("+minionID+") was banned from "+guild.name);
-				return bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
-			})
-			.catch(console.error)
-		},3000);
-	}
-});
-
-bot.on("guildMemberAdd", member => {
-	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-
-	let guild=member.guild; let user=member.user;
-	console.log(timeStampSys+"[ADMIN] [JOIN] \""+user.username+"\" ("+user.id+") has joined server: "+guild.name);
-});
-
-bot.on("guildMemberRemove", member => {
-	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-
-	let g=member.guild; let u=member.user;
-	console.log(timeStampSys+"[ADMIN] [QUIT] \""+u.username+"\" ("+u.id+") has left server: "+g.name);
-});
-
-
-//
 // DATABASE TIMER FOR TEMPORARY ROLES
-//
 setInterval(function(){
 	let CurrTime=new Date();
 	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
@@ -114,12 +57,6 @@ setInterval(function(){
 // 10800000 = 3hrs 
 // 3600000 = 1hr
 
-
-//
-// END
-//
-
-
 // ##########################################################################
 // ############################## TEXT MESSAGE ##############################
 // ##########################################################################
@@ -149,120 +86,6 @@ bot.on('message', message => {
 	let AdminR=g.roles.find("name", config.adminRoleName); if(!AdminR){ AdminR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find role: "+config.adminRoleName); }
 	let ModR=g.roles.find("name", config.modRoleName); if(!ModR){ ModR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find role: "+config.modRoleName); }
 	
-
-
-// ##########################################################################
-// ############################## SPAM CONTROL ##############################
-// ##########################################################################
-	// AVOID ADVERTISEMENT | OTHER SERVER NAMES
-	const advTxt=["seapokemap","sea-pokemap","pokehuntr","gymhuntr","pokefetch","pokehuntr.com","gymhuntr.com","pokefetch.com",
-				"http://pokehuntr.com","http://gymhuntr.com","http://pokefetch.com","http://www.pokehuntr.com","http://www.gymhuntr.com","http://www.pokefetch.com"];
-	
-	// AVOID SPOOFTALKS
-	const spoofTxt=["spoof","spooof","spooph","spoooph","sp00f","sp000f","spo0f","sp0of","s.p.o.o.f","s.p.o.0.f","s.p.0.o.f","s-p-o-o-f","joystick"];
-	
-	// FRIENDLY CHAT
-	const censorTxt=["fuck","bastard","pussy","dick","cock","dildo","ballsack","boner","shit"," anal"," ass","buttplug","bitch","twat","whore","cunt","biatch","fag","queer","nigga","jizz"];
-	
-	// DATE&TIME VALUES
-	const DTdays=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-	const DTmonths=["January","February","March","April","May","June","July","August","September","October","November","December"];
-	
-	
-// ############################## NO OTHER INVITES EXCEPT ONES POSTED BY BOT OR STAFF ##############################
-	let invLinks=msg.match(/discord.gg/g);
-	if(invLinks){
-		if(m.id===config.botID || m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){skip="yes"}
-		
-		if(skip==="no"){
-			message.delete();
-			embedMSG={
-				'color': 0xFF0000,
-				'title': '⚠ WARNING: No Invites ⚠',
-				'thumbnail': {'url': config.warningImg},
-				'description': 'You are being **WARNED** about an __invite__ code or link... '
-					+'Advertising of other servers is **NOT** allowed in our server.\n**OffenseDate**: '+timeStamp
-			};
-			console.log(timeStampSys+"[ADMIN] [INVITE-TXT] \""+m.user.username+"\" ("+m.id+") said: "+message.content);
-			m.send({embed: embedMSG}).catch(console.error);
-			return m.send("Please **Read/Review Our Rules** at: <#"+config.rulesChannelID+"> ... in order to avoid Mute/Kick/Ban");
-		}
-	}
-	
-	
-	
-// ############################## ADVERTISEMENT CHECKER ##############################
-	if(advTxt.some(word => msg.includes(word))){
-		
-		// STOP SCRIPT IF USER IS ADMIN|OWNER|MOD|STAFF
-		if(m.id===config.botID || m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){skip="yes"}
-		
-		if(skip==="no"){
-			message.delete();
-			embedMSG={
-				'color': 0xFF0000,
-				'title': '⚠ WARNING: No Advertising ⚠',
-				'thumbnail': {'url': config.warningImg},
-				'description': 'You are being **WARNED** about a word/link... '
-					+'Advertising is **NOT** allowed in our server.\n**OffenseDate**: '+timeStamp
-			};
-			console.log(timeStampSys+"[ADMIN] [ADV-TEXT] \""+m.user.username+"\" ("+m.id+") said: "+message.content);
-			m.send({embed: embedMSG}).catch(console.error);
-			return m.send("Please **Read/Review Our Rules** at: <#"+config.rulesChannelID+"> ... in order to avoid Mute/Kick/Ban");
-		}
-	}
-	
-	
-	
-// ############################## SPOOF-TALK CHECKER ##############################
-	if(spoofTxt.some(word => msg.includes(word))){
-		if(m){
-			// STOP SCRIPT IF USER IS ADMIN|OWNER|MOD|STAFF
-			if(message.author.id===config.botID || 
-				m.roles.has(ModR.id) || 
-					m.roles.has(AdminR.id) || 
-						m.id===config.ownerID){skip="yes"}
-			
-			if(skip==="no"){
-				message.delete();
-				embedMSG={
-					'color': 0xFF0000,
-					'title': '⚠ WARNING: No SpoOf Talks ⚠',
-					'thumbnail': {'url': config.warningImg},
-					'description': 'You are being **WARNED** about a word... '
-						+'**Spoof**-talk is **NOT** allowed in our server.\n**OffenseDate**: '+timeStamp
-				};
-				console.log(timeStampSys+"[ADMIN] [SPOOF-TEXT] \""+m.user.username+"\" ("+m.id+") said: "+message.content);
-				m.send({embed: embedMSG}).catch(console.error);
-				return m.send("Please **Read/Review Our Rules** at: <#"+config.rulesChannelID+"> ... in order to avoid Mute/Kick/Ban");
-			}
-		}
-	}
-	
-	
-	
-// ############################## CENSORSHIP | FRIENDLY CHAT ##############################
-	if(censorTxt.some(word => msg.includes(word))){
-		
-		// STOP SCRIPT IF USER IS ADMIN|OWNER|MOD|STAFF
-		if(m.id===config.botID || m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){skip="yes"}
-		
-		if(skip==="no"){
-			message.delete();
-			embedMSG={
-				'color': 0xFF0000,
-				'title': '⚠ WARNING: Watch Your Language ⚠',
-				'thumbnail': {'url': config.warningImg},
-				'description': 'You are being **WARNED** about a **inappropriate** word... '
-					+'Please watch your language; kids play this game too, you know\n**OffenseDate**: '+timeStamp
-			};
-			console.log(timeStampSys+"[ADMIN] [CENSOR-TXT] \""+m.user.username+"\" ("+m.id+") said: "+message.content);
-			m.send({embed: embedMSG}).catch(console.error);
-			return m.send("Please **Read/Review Our Rules** at: <#"+config.rulesChannelID+"> ... in order to avoid Mute/Kick/Ban");
-		}
-	}
-
-
 // ############################################################################
 // ############################## COMMANDS BEGIN ##############################
 // ############################################################################
@@ -271,342 +94,47 @@ bot.on('message', message => {
 	if(!message.content.startsWith(config.cmdPrefix)){ return }
 	
 // ############################################################################
-// ########################## COMMANDS SPAM CONTROL ###########################
+// ################################ COMMANDS ##################################
 // ############################################################################
 
-	// SPAM CONTROL FOR COMMANDS
-	if(message.content.startsWith(config.cmdPrefix) && command){
-		
-		// CONSOLE ALL COMMANDS TYPED
-		// console.info(timeStampSys+"[ADMIN] \""+m.user.username+"\" ("+m.id+") used command: [!"+command+" "+args+"] in server: \""+g.name+"\", channel: #"+c.name);
-		
-		// STOP SCRIPT IF USER IS ADMIN|OWNER|MOD|STAFF
-		if(m.id===config.botID || m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){ 
-			skip="yes"; 
-			// console.info(timeStampSys+"[ADMIN] [SPAM CONTROL] COMMANDS-SPAM-CONTROL Stopped for ADMIN|OWNER|MOD|STAFF"); 
+	
+// ######################### COMMANDS/HELP ###########################
+	if(command==="commands" || command==="help") {
+		if(args[0]==="mods") {
+			if(m.roles.has(ModR.id) || m.roles.has(AdminR.id)) {
+				cmds="--- ** COMMANDS FOR MODS ** ---\n"
+					+"`!temprole`   \\\u00BB   ROLES multiple options\n"
+					+"`!temprole <ROLE-NAME> @mention <DAYS>`   \\\u00BB   to assign temporary roles\n";
+				return c.send(cmds).catch(console.error);
+			}
+			else {
+				return message.reply("you are **NOT** allowed to use this command! \ntry using: `!commads`").catch(console.error); 
+			}
 		}
-		
-		if(skip==="no"){
-			// CHECK DATABASE IF USER EXIST AND/OR TYPED A COMMAND
-			sql.get(`SELECT * FROM cmd_spamCTRL WHERE userID="${m.id}"`).then(row => {
-				
-				// USER NOT FOUND IN DATABASE
-				if (!row) {
-					sql.run("INSERT INTO cmd_spamCTRL (userID, cmdCount) VALUES (?, ?)", [m.id, 1]);
-					return console.info(timeStampSys+"[ADMIN] [SPAM CONTROL] I've added \""+m.user.username+"\" ("+m.id+") to my `DataBase`, they were not in it!");
-				}
-				
-				// USER FOUND IN DATABASE
-				else {
-					sql.get(`SELECT * FROM cmd_spamCTRL WHERE userID="${m.id}"`).then(row => {
-						
-						// GET CMD COUNT, AND ADD 1
-						let cmdCurCount=row.cmdCount; cmdCurCount++;
-						sql.run("UPDATE cmd_spamCTRL SET cmdCount="+cmdCurCount+" WHERE userID="+m.id).catch(console.error);
-						// console.info(timeStampSys+"[ADMIN] [SPAM CONTROL] Added +1 to user: "+m.user.username+" ("+m.id+")'s cmdCount");
-						
-						// GET CMD COUNT AGAIN FOR FEEDBACK AND TIMER
-						sql.get(`SELECT * FROM cmd_spamCTRL WHERE userID="${m.id}"`).then(row => {
-							
-							// IF TYPED 4 COMMANDS, KICK FOR SPAM
-							if(row.cmdCount==="4"){
-								m.send("⚠ **NOTICE:** you have been **KICKED** due to: **command SPAM/ABUSE**, next time it will be a **BAN**");
-								c.send("⚠ **NOTICE:** "+m.user+" has been **KICKED** due to: **command SPAM/ABUSE**, next time it will be a **BAN**");
-								embedMSG={
-									'color': 0xFF0000,
-									'title': '"'+m.user.username+'" HAS BEEN KICKED',
-									'thumbnail': {'url': config.kickedImg},
-									'description': '**UserID**: '+m.user.id+'\n**UserTag**: '+m.user.username+'\n'
-										+'**Reason**: Command Spamming\n**Command**: !'+message.content+'\n\n**By**: AutoDetect \n**On**: '+timeStamp
-								};
-								bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
-								g.member(m.user.id).kick();
-							}
-							
-							// IF TYPED 3 COMMANDS WARN THEM
-							if(row.cmdCount==="3"){
-								console.info(timeStampSys+"[ADMIN] [SPAM CONTROL] WARNING: "+m.user.username+" ("+m.id+") have used 3 consecutive commands, they could be KICKED...");
-								m.send("⚠ **WARNING:** you have used 3 consecutive commands, please allow **15 seconds** between each command! **1 more and you will be __KICKED__**");
-								c.send("⚠ **WARNING:** "+m.user+", you have used 3 consecutive commands, please allow **15 seconds** between each command! **1 more and you will be __KICKED__**");
-							}
-							
-							// RESET COUNT AFTER 15000 MILISECONDS (15 SECS DUH!)
-							setTimeout(function(){sql.run("UPDATE cmd_spamCTRL SET cmdCount=0 WHERE userID="+m.id).catch(console.error);},15000);
-						});
-					});
-				}
-			}).catch(() => {
-				console.error;
-				sql.run("CREATE TABLE IF NOT EXISTS cmd_spamCTRL (userID TEXT, cmdCount TEXT)").then(() => {
-					sql.run("INSERT INTO cmd_spamCTRL (userID, cmdCount) VALUES (?, ?)", [m.id, 1]);
-					console.info(timeStampSys+"[ADMIN] [SPAM CONTROL] Table was not found in DataBased, I've created it.");
-					console.info(timeStampSys+"[ADMIN] [SPAM CONTROL] I've added \""+m.user.username+"\" ("+m.id+") to my `DataBase`, they were not in it!");
-				});
-			});
+		if(c.id!==config.botsupportChannelID){
+			return message.reply("this command can only be used at: <#"+config.botsupportChannelID+">");
 		}
+		if(!args[0]) { 
+			cmds="";
+			if(config.mapMain.enabled==="yes"){ cmds+="`!map`   \\\u00BB   a link to our **Live Web Map** [much cooler]\n" }
+			if(config.paypal.enabled==="yes"){ cmds+="`!subscribe`/`!paypal`   \\\u00BB   for a link to our **PayPal**\n" }
+		}
+		return c.send(cmds).catch(console.error);
 	}
 
-	
-	
-// ############################## STATS ##############################
-	if(command==="stats"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			let onlineM=g.members.filter(m=>m.presence.status==="online").size;
-			let idleM=g.members.filter(m=>m.presence.status==="idle").size;
-			let busyM=g.members.filter(m=>m.presence.status==="dnd").size;
-			let totalM=onlineM+idleM+busyM;
-			
-			embedMSG={
-				'color': 0x00FF00,
-				'title': '📊 SERVER STATS 📈',
-				'description': ''
-					+'🗨 **Online** members: **'+onlineM+'**\n'
-					+'📵 **Idle** members: **'+idleM+'**\n'
-					+'🔴 **Busy** members: **'+busyM+'**\n'
-					+'🚫 **Invisible** members: **'+g.members.filter(m=>m.presence.status==="offline").size+'**\n'
-					+'💚 **Total Online** members: **'+totalM+'**\n'
-					+'📋 **Total** members __Today__: **'+g.members.size+'**\n'
-					+'📜 **Registered** members: **'+g.memberCount+'**'
+// ######################### PAYPAL/SUBSCRIBE ########################
+	if(command==="paypal" || command==="subscribe") {
+		if(config.paypal.enabled==="yes"){
+			let embedMSG={
+				'color': 0xFF0000,
+				'title': '\u00BB\u00BB Click HERE to Subscribe \u00AB \u00AB',
+				'url': config.paypal.url,
+				'thumbnail': {'url': config.paypal.img},
+				'description': '(>^.^)> .! Thank you !. <(^.^<)\nYour support is greatly appreciated'
 			};
 			return c.send({embed: embedMSG}).catch(console.error);
 		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
 	}
-	
-
-	
-	
-// ############################## INFO ##############################
-	if(command==="info"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			if(args[0]==="server"){
-				let gDate=g.createdAt; let gCreatedDate=DTdays[gDate.getDay()].slice(0,3)+" "+DTmonths[gDate.getMonth()]+" "+gDate.getDate()+", "+gDate.getFullYear();
-				let userBots=message.guild.members.filter(b => b.user.bot);
-				embedMSG={
-					'color': 0x00FF00,
-					'title': '📊 '+g.name+' » ServerInfo 📈',
-					'thumbnail': {'url': g.iconURL},
-					'fields': [
-						{'name': '👤 ServerOwner:', 'value': '<@'+g.owner.id+'>', 'inline': true},
-						{'name': '📆 DateCreated:','value': gCreatedDate,'inline': true},
-						{'name': '📝 RolesCount:','value': g.roles.size,'inline': true},
-						{'name': '👥 MemberCount:','value': g.memberCount,'inline': true},
-						{'name': '🤖 UserBots:','value': userBots.size,'inline': true},
-						{'name': '🗒 Channels:','value': g.channels.size,'inline': true}
-					]
-				};
-				return c.send({embed: embedMSG}).catch(console.error);
-			}
-			if(mentioned){
-				let gMember=g.members.get(mentioned.id);
-				
-				let joinedAt=""; let joinedDT=""; let joinedDate=""; let mRolesName=""; let userRoleCount=""; let roleNames="";
-				
-				// MEMBER NICKNAME
-				if(!gMember.nickname){gMember.nickname="No \"/Nick\" yet"}
-				
-				// JOINED DATE()
-				joinedAt=gMember.joinedTimestamp; joinedDT=new Date(); joinedDT.setTime(joinedAt);
-				joinedDate=DTdays[joinedDT.getDay()].slice(0,3)+" "+DTmonths[joinedDT.getMonth()]+" "+joinedDT.getDate()+", "+joinedDT.getFullYear();
-				
-				// MEMBER ROLES
-				mRolesName=gMember.roles.map(r => r.name); mRolesName=mRolesName.slice(1); userRoleCount=mRolesName.length; if(!mRolesName){userRoleCount=0} roleNames="NONE "; 
-				if(userRoleCount!==0){ roleNames=mRolesName }
-				
-				embedMSG={
-					'color': 0x00FF00,
-					'title': '👤 '+mentioned.username+'\'s UserInfo',
-					'thumbnail': {'url': 'https://cdn.discordapp.com/avatars/'+mentioned.id+'/'+mentioned.avatar+'.png'},
-					'fields': [
-						{'name': '⚠ Warning:', 'value': 'The member is inactive! The info I found is limited!', 'inline': false},
-						{'name': '👥 Nick/AKA', 'value': '`'+gMember.nickname+'`', 'inline': true},
-						{'name': '🕵 UserID', 'value': '`'+mentioned.id+'`', 'inline': true},
-						{'name': '📝 Roles ('+userRoleCount+')', 'value': '`'+roleNames+'`', 'inline': true},
-						{'name': '📆 JoinedDate', 'value': '`'+joinedDate+'`', 'inline': true}
-					]
-				};
-				
-				// LAST SEEN INFO - ONLY AVAILABLE IF MEMBER TYPED SOMETHING IN THE LAST 60 SECONDS - PER DISCORD DEFAULTS
-				if(mentioned.lastMessage!==null){
-					// LAST SEEN DATE
-					let seenDT=new Date(); seenDT.setTime(mentioned.lastMessage.createdTimestamp); 
-					let seenHr=seenDT.getHours(); if(seenHr<10){seenHr="0"+seenHr} let seenMin=seenDT.getMinutes(); if(seenMin<10){seenMin="0"+seenMin}
-					let seenDate=seenDT.getDate()+"/"+DTmonths[seenDT.getMonth()].slice(0,3)+"/"+seenDT.getFullYear()+" @ "+seenHr+":"+seenMin+"hrs";
-					
-					embedMSG={
-						'color': 0x00FF00,
-						'title': '👤 '+mentioned.username+'\'s UserInfo',
-						'thumbnail': {'url': 'https://cdn.discordapp.com/avatars/'+mentioned.id+'/'+mentioned.avatar+'.png'},
-						'fields': [
-							{'name': '👥 Nick/AKA', 'value': '`'+gMember.nickname+'`', 'inline': true},
-							{'name': '🕵 UserID', 'value': '`'+mentioned.id+'`', 'inline': true},
-							{'name': '📝 Roles ('+userRoleCount+'):', 'value': '`'+roleNames+'`', 'inline': true},
-							{'name': '📆 JoinedDate:', 'value': '`'+joinedDate+'`', 'inline': true},
-							{'name': '👁‍ LastSeenChannel:', 'value': '`#'+mentioned.lastMessage.channel.name+'`', 'inline': true},
-							{'name': '⏲ LastSeenDate:', 'value': '`'+seenDate+'`', 'inline': true},
-							{'name': '🗨 LastMessageSent:', 'value': '`'+mentioned.lastMessage.content+'`', 'inline': true}
-						]
-					};
-				}
-				return c.send({embed: embedMSG}).catch(console.error);
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-	
-	
-// ############################## DELETE ##############################
-	if(command==="del"){ 
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			let amt=parseInt(msg.split(" ").slice(1))+1;
-			c.fetchMessages({ limit: amt })
-			.then(messages => c.bulkDelete(amt), console.log(timeStampSys+"[ADMIN] [DELETE] \""+m.user.username+"\" deleted: "+amt+" messages from: "+g.name+" in: #"+c.name)).catch(console.error);
-			return;
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-	
-	
-// ############################## OFFLINE ##############################
-	if(command==="offline"){
-		let damsg; if(!args[0]){damsg="UnKnown";}
-		else {damsg="";} for (var x=1; x<args.length; x++){ damsg += " "+args[x]; }
-		if(m.roles.has(AdminR.id) || m.id===config.ownerID){
-			message.delete();
-			c.send("⚠ @everyone ⚠\nWe're going **Offline** for: __"+args[0]+"__; "+damsg);
-
-			embedMSG={
-				'color': 0xFF0000,
-				'title': 'WE ARE GOING OFFLINE',
-				'thumbnail': {'url': config.offlineImg},
-				'description': '\n__Reason__: **'+damsg
-					+'**\n__Estimated Time__: **'+args[0]+'**\n\nSorry for the inconvenience'
-			};
-			return bot.channels.get(config.announcementChannelID).send({embed: embedMSG}).catch(console.error);
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-	
-	
-// ############################## ROLES ##############################
-	if(command.startsWith("role")){
-		
-		// ROLES ARE CASE SENSITIVE TO RESET MESSAGE AND ARGUMENTS
-		msg=message.content; args=msg.split(" ").slice(1);
-		
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			message.delete();
-			if(!args[0]){
-				return message.reply("usage: `!roles count`,\n or `!roles find <ROLE-NAME>`,\n or `!role @mention <ROLE-NAME>`,\n or `!role remove @mention <ROLE-NAME>`");
-			}
-			if(args[0]==="count"){
-				return c.send("There are **"+g.roles.size+"** roles on this server");
-			}
-			if(args[0]==="find"){
-				let daRolesN=g.roles.map(r => r.name);let daRolesNl=g.roles.map(r => r.name.toLowerCase()); let meantThis="";
-				
-				// ROLES WITH SPACES - NEW
-				let daRoles="";if(!args[2]){daRoles=args[1]}else{daRoles="";for(var x=1;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
-				
-				let rName=g.roles.find('name', daRoles); 
-				if(!rName){
-					let startWord=args[1].slice(0,3); startWord=startWord.toLowerCase();
-					for (var i=0;i<daRolesN.length;i++){
-						if(daRolesNl[i].startsWith(startWord)){
-							meantThis += daRolesN[i] +", ";
-						}
-					}
-					if(!meantThis){
-						startWord=args[1].slice(0,2).toLowerCase(); meantThis="";
-						for (var i=0;i<daRolesN.length;i++){
-							if(daRolesNl[i].startsWith(startWord)){
-								meantThis += daRolesN[i] +", ";
-							}
-						}
-					}
-					if(!meantThis){
-						startWord=args[1].slice(0,1).toLowerCase(); meantThis="";
-						for (var i=0;i<daRolesN.length;i++){
-							if(daRolesNl[i].startsWith(startWord)){
-								meantThis += daRolesN[i] +", ";
-							}
-						}
-					}
-					if(meantThis){
-						return message.reply("I couldn't find such role, but I found these **roles**: "+meantThis.slice(0,-2));
-					}
-					return message.reply("I couldn't find such role, please try again! syntax: `!roles find <ROLE-NAME>`");
-				}
-				else {
-					return message.reply("found it! who would you like to assign this role to? IE: `!role @mention "+daRoles+"`");
-				}
-			}
-			if(args[0]==="remove"){
-				let daRolesN=g.roles.map(r => r.name); let meantThis="";
-				
-				// ROLES WITH SPACES - NEW
-				let daRoles="";if(!args[3]){daRoles=args[2]}else{daRoles="";for(var x=2;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
-				
-				if(!mentioned){
-					return message.reply("please `@mention` a person you want me to remove `!role` from...");
-				}
-				if(!args[2]){
-					return message.reply("what role do you want me to remove from "+mentioned+" 🤔 ?");
-				}
-				
-				// CHECK ROLE EXIST
-				let rName=g.roles.find('name', daRoles); 
-				if(!rName){
-					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
-				}
-				
-				// CHECK MEMBER HAS ROLE
-				if(!g.members.get(mentioned.id).roles.has(rName.id)){
-					return c.send("Member doesnt have this role");
-				}
-				else {
-					mentioned=message.mentions.members.first();
-					mentioned.removeRole(rName).catch(console.error);
-					return c.send("⚠ "+mentioned+" have **lost** their role of: **"+daRoles+"** 😅 ");
-				}
-			}
-			if(args[0] && !mentioned){
-				return message.reply("please `@mention` a person you want me to give/remove `!role` to...");
-			}
-			else {
-				let daRoles="";if(!args[2]){daRoles=args[1]}else{daRoles="";for(var x=1;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
-				mentioned=message.mentions.members.first();
-				
-				let rName=g.roles.find('name', daRoles); 
-				if(!rName){
-					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
-				}
-				mentioned.addRole(rName).catch(console.error);
-				return c.send("👍 "+mentioned+", has been given the role of: **"+daRoles+"**, enjoy! 🎉");
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-	
 	
 // ############################## TEMPORARY ROLES ##############################
 	if(command.startsWith("temprole") || command==="tr" || command==="trole"){
@@ -615,7 +143,7 @@ bot.on('message', message => {
 		msg=message.content; args=msg.split(" ").slice(1);
 		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			// message.delete();
+
 			if(!args[0]){
 				return message.reply("syntax:\n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
@@ -715,219 +243,27 @@ bot.on('message', message => {
 			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
 		}
 	}
-	
-	
-	
-// ############################## WARNING ##############################
-	if(command==="warn"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			if(!mentioned){
-				message.delete();
-				return message.reply("please `@mention` a person you want me to `!warn`");
-			}
-			else {
-				message.delete();
-				
-				// IMPROVED WAY TO GRAB REASONS:
-					let msgReasons;if(message.content.indexOf(" ")===-1){return}
-					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
-					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
-					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
-				
-				embedMSG={
-					'color': 0xFF0000,
-					'title': '⚠ THIS IS A WARNING ⚠',
-					'thumbnail': {'url': config.warningImg},
-					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-				};
-				bot.users.get(mentioned.id).send({embed: embedMSG}).catch(console.error);
-				embedMSG={
-					'color': 0xFF0000,
-					'title': '⚠ "'+mentioned.username+'" WAS WARNED',
-					'thumbnail': {'url': config.warningImg},
-					'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-						+'**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-				};
-				c.send("⚠ "+mentioned+", you are being **WARNED** about: **"+msgReasons+'**');
-				return bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-	
-	
-// ############################## MUTE ##############################
-	if(command==="mute"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-			if(!mentioned){
-				message.delete();
-				return message.reply("please `@mention` a person you want me to `!mute`");
-			}
-			else {
-				message.delete();
-				
-				// IMPROVED WAY TO GRAB REASONS:
-					let msgReasons;if(message.content.indexOf(" ")===-1){return}
-					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
-					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
-					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
-				
-				mentioned=message.mentions.users.first();
-				c.overwritePermissions(mentioned, {SEND_MESSAGES: false})
-				.then(() => {
-					embedMSG={
-						'color': 0xFF0000,
-						'title': '🤐 "'+mentioned.username+'" WAS MUTED',
-						'thumbnail': {'url': config.mutedImg},
-						'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-							+'**Channel**: <#'+c.id+'>\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-					};
-					bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
-					console.log(timeStampSys+"[ADMIN] [MUTE] \""+mentioned.username+"\" ("+mentioned.id+") was MUTED in guild: "+g.name+", channel: #"+c.name+" due to: "+msgReasons);
-					return c.send("⚠ "+mentioned+" has been 🤐 **MUTED** for: **"+msgReasons+'**');
-				}).catch(console.error);
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-	
-	
-// ############################## MUTE ##############################
-	if(command==="unmute"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
 
-			if(!mentioned){
-				message.delete();
-				return message.reply("please `@mention` a person you want me to `!unmute`");
-			}
-			else {
-				message.delete();
-				mentioned=message.mentions.users.first();
-				c.permissionOverwrites.get(mentioned.id).delete().catch(console.error);
-				return c.send(mentioned+" can now **type/send** messages again 👍 ... but **don't** abuse it!");
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
+// ######################### OTHER ###################################
+	if(command==="map") {
+		if(config.mapMain.enabled==="yes"){
+			return c.send("Our official **webmap**: \n"+config.mapMain.url).catch(console.error);
 		}
 	}
-	
-	
-	
-// ############################## KICK ##############################
-	if(command==="kick"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-
-			if(!mentioned){
-				message.delete();
-				return message.reply("please `@mention` a person you want me to `!kick`");
-			}
-			else {
-				message.delete();
-				
-				// IMPROVED WAY TO GRAB REASONS:
-					let msgReasons;if(message.content.indexOf(" ")===-1){return}
-					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
-					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
-					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
-				
-				mentioned=message.mentions.users.first();
-				console.log(timeStampSys+"[ADMIN] [KICK] \""+mentioned.username+"\" ("+mentioned.id+") was KICKED from guild: "+g.name+", channel: #"+c.name+" due to: "+msgReasons);
-				c.send("⚠ "+mentioned+" has been 👢 __**kicked**__ from server for: **"+msgReasons+"**").catch(console.error);
-				embedMSG={
-					'color': 0xFF0000,
-					'title': 'YOU HAVE BEEN KICKED',
-					'thumbnail': {'url': config.kickedImg},
-					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-				};
-				bot.users.get(mentioned.id).send({embed: embedMSG}).then(()=>{
-					embedMSG={
-						'color': 0xFF0000,
-						'title': '👢 "'+mentioned.username+'" WAS KICKED',
-						'thumbnail': {'url': config.kickedImg},
-						'description': '**UserID**: '+mentioned.id+'\n**UserTag**: '+mentioned+'\n'
-							+'**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-					};
-					bot.channels.get(config.modlogChannelID).send({embed: embedMSG}).catch(console.error);
-					return g.member(mentioned.id).kick().catch(console.error);
-				}).catch(console.error);
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}
-	
-	
-	
-// ############################## BAN ##############################
-	if(command==="ban"){
-		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-
-			if(!mentioned){
-				message.delete();
-				return message.reply("please `@mention` a person you want me to `!ban`");
-			}
-			else {
-				
-				// IMPROVED WAY TO GRAB REASONS:
-					let msgReasons;if(message.content.indexOf(" ")===-1){return}
-					else{msgReasons=message.content.slice(message.content.indexOf(" "));msgReasons=msgReasons.trim();
-					if(msgReasons.indexOf(" ")===-1){msgReasons="Check yourself!"}
-					else{msgReasons=msgReasons.trim();msgReasons=msgReasons.slice(msgReasons.indexOf(" "));msgReasons=msgReasons.trim();}}
-				
-				console.log(timeStampSys+"[ADMIN] [BAN] \""+mentioned.username+"\" ("+mentioned.id+") was BANNED from guild: "+g.name+", channel: #"+c.name+" due to: "+msgReasons);
-				c.send("⛔ "+mentioned+" has been __**banned**__ 🔨 from server for: **"+msgReasons+"**").catch(console.error);
-				embedMSG={
-					'color': 0xFF0000,
-					'title': 'YOU HAVE BEEN BANNED',
-					'thumbnail': {'url': config.bannedImg},
-					'description': '**From Server**: '+config.serverName+'\n**Reason**: '+msgReasons+'\n\n**By**: '+m.user+'\n**On**: '+timeStamp
-				};
-				bot.users.get(mentioned.id).send({embed: embedMSG}).then(()=>{
-					return g.member(mentioned.id).ban({days: 7, reason: msgReasons}).catch(console.error);
-				}).catch(console.error);
-			}
-		}
-		else {
-			message.delete();
-			return message.reply("you are **NOT** allowed to use this command!").catch(console.error); 
-		}
-	}	
-	
-	
-	
-	if(command==="discord"){
-		c.send("**Discord** API [`discord.js`] __version__: "+Discord.version);
-	}
-	
-	
 	
 	if(command==="restart"){
 		if(m.id===config.ownerID){
-			if(args[0]==="admin"){
-				message.reply("Restarting **Admin** (`adminBot.js`) module... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
+			if(args[0]==="user"){
+				message.reply("Restarting **User** (`userBot.js`) branch... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
 			}
 		}
-	}	
+	}
 });
 
 
 
 // log our bot in
 bot.login(config.token);
-
-
 
 bot.on('disconnected', function (){
 	let CurrTime=new Date();
