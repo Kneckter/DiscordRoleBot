@@ -41,7 +41,7 @@ setInterval(function(){
 						+rows[rowNumber].temporaryRole+"** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
 					
 					// REMOVE ROLE FROM MEMBER IN GUILD
-					let rName=bot.guilds.get(config.serverID).roles.find('name', rows[rowNumber].temporaryRole); 
+					let rName=bot.guilds.get(config.serverID).roles.find(rName => rName.name === rows[rowNumber].temporaryRole); 
 					bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID).removeRole(rName).catch(console.error);
 					
 					// REMOVE DATABASE ENTRY
@@ -67,6 +67,11 @@ bot.on('message', message => {
 	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
 	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
 	
+// ############################## COMMANDS BEGIN ##############################
+
+	// MAKE SURE ITS A COMMAND
+	if(!message.content.startsWith(config.cmdPrefix)){ return }
+
 	//STOP SCRIPT IF DM/PM
 	if(message.channel.type=="dm"){ return }
 	
@@ -83,15 +88,9 @@ bot.on('message', message => {
 	let args=msg.split(" ").slice(1); skip="no";
 	
 	// GET ROLES FROM CONFIG
-	let AdminR=g.roles.find("name", config.adminRoleName); if(!AdminR){ AdminR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find role: "+config.adminRoleName); }
-	let ModR=g.roles.find("name", config.modRoleName); if(!ModR){ ModR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find role: "+config.modRoleName); }
-	
-// ############################################################################
-// ############################## COMMANDS BEGIN ##############################
-// ############################################################################
+	let AdminR=g.roles.find(role => role.name === config.adminRoleName); if(!AdminR){ AdminR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find admin role: "+config.adminRoleName); }
+	let ModR=g.roles.find(role => role.name === config.modRoleName); if(!ModR){ ModR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find mod role: "+config.modRoleName); }
 
-	// MAKE SURE ITS A COMMAND
-	if(!message.content.startsWith(config.cmdPrefix)){ return }
 	
 // ############################################################################
 // ################################ COMMANDS ##################################
@@ -102,9 +101,9 @@ bot.on('message', message => {
 	if(command==="commands" || command==="help") {
 		if(args[0]==="mods") {
 			if(m.roles.has(ModR.id) || m.roles.has(AdminR.id)) {
-				cmds="--- ** COMMANDS FOR MODS ** ---\n"
-					+"`!temprole`   \\\u00BB   ROLES multiple options\n"
-					+"`!temprole <ROLE-NAME> @mention <DAYS>`   \\\u00BB   to assign temporary roles\n";
+				cmds="`!temprole @mention <DAYS> <ROLE-NAME>`   \\\u00BB   to assign a temporary roles\n"
+					+"`!temprole check @mention`   \\\u00BB   to check the time left on a temporary role assignment\n"
+					+"`!temprole remove @mention`   \\\u00BB   to remove a temporary role assignment\n";
 				return c.send(cmds).catch(console.error);
 			}
 			else {
@@ -116,8 +115,8 @@ bot.on('message', message => {
 		}
 		if(!args[0]) { 
 			cmds="";
-			if(config.mapMain.enabled==="yes"){ cmds+="`!map`   \\\u00BB   a link to our **Live Web Map** [much cooler]\n" }
-			if(config.paypal.enabled==="yes"){ cmds+="`!subscribe`/`!paypal`   \\\u00BB   for a link to our **PayPal**\n" }
+			if(config.mapMain.enabled==="yes"){ cmds+="`!map`   \\\u00BB   a link to our web map\n" }
+			if(config.paypal.enabled==="yes"){ cmds+="`!subscribe`/`!paypal`   \\\u00BB   for a link to our PayPal\n" }
 		}
 		return c.send(cmds).catch(console.error);
 	}
@@ -127,10 +126,10 @@ bot.on('message', message => {
 		if(config.paypal.enabled==="yes"){
 			let embedMSG={
 				'color': 0xFF0000,
-				'title': '\u00BB\u00BB Click HERE to Subscribe \u00AB \u00AB',
+				'title': 'Click HERE to Subscribe',
 				'url': config.paypal.url,
 				'thumbnail': {'url': config.paypal.img},
-				'description': '(>^.^)> .! Thank you !. <(^.^<)\nYour support is greatly appreciated'
+				'description': 'Thank you! \nYour support is greatly appreciated.'
 			};
 			return c.send({embed: embedMSG}).catch(console.error);
 		}
@@ -184,7 +183,7 @@ bot.on('message', message => {
 							return message.reply("⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
 						}
 						else {
-							let theirRole=g.roles.find('name', row.temporaryRole);
+							let theirRole=g.roles.find(theirRole => theirRole.name === row.temporaryRole);
 							mentioned.removeRole(theirRole).catch(console.error);
 							sql.get(`DELETE FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
 								return c.send("⚠ "+mentioned+" have **lost** their role of: **"+theirRole.name+"** and has been removed from my `DataBase`");
@@ -210,9 +209,9 @@ bot.on('message', message => {
 				}
 				
 				// CHECK ROLE EXIST
-				let rName=g.roles.find('name', daRoles);
+				let rName=g.roles.find(rName => rName.name === daRoles);
 				if(!rName){
-					return message.reply("I couldn't find such role, please try searching for it first: `!roles find <ROLE-NAME>`");
+					return message.reply("I couldn't find such role, please check the spelling and try again.`");
 				}
 				
 				// ADD MEMBER TO DATASE, AND ADD THE ROLE TO MEMBER
@@ -223,11 +222,9 @@ bot.on('message', message => {
 						let finalDate=((args[1])*(dateMultiplier)); finalDate=((curDate)+(finalDate));
 						finalDateDisplay.setTime(finalDate); finalDateDisplay=(finalDateDisplay.getMonth()+1)+"/"+finalDateDisplay.getDate()+"/"+finalDateDisplay.getFullYear();
 						
-						// DEBUG
-						// return c.send(" curDate: `"+curDate+"`\n finalDate: `"+finalDate+"`\n dateMultiplier: `"+dateMultiplier+"`\n finalDateDisplay: "+finalDateDisplay);
 						sql.run("INSERT INTO temporary_roles (userID, temporaryRole, startDate, endDate, addedBy) VALUES (?, ?, ?, ?, ?)", 
 							[mentioned.id, daRoles, curDate, finalDate, m.id]);
-						let theirRole=g.roles.find('name', daRoles);
+						let theirRole=g.roles.find(theirRole => theirRole.name === daRoles);
 						mentioned.addRole(theirRole).catch(console.error);
 						console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+mentioned.user.username+"\" ("+mentioned.id+") was given role: "+daRoles+" by: "+m.user.username+" ("+m.id+")");
 						return c.send("🎉 "+mentioned+" has been given a **temporary** role of: **"+daRoles+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
@@ -244,18 +241,10 @@ bot.on('message', message => {
 		}
 	}
 
-// ######################### OTHER ###################################
+// ######################### MAP ###################################
 	if(command==="map") {
 		if(config.mapMain.enabled==="yes"){
-			return c.send("Our official **webmap**: \n"+config.mapMain.url).catch(console.error);
-		}
-	}
-	
-	if(command==="restart"){
-		if(m.id===config.ownerID){
-			if(args[0]==="user"){
-				message.reply("Restarting **User** (`userBot.js`) branch... please wait `5` to `10` seconds").then(()=>{ process.exit(1) }).catch(console.error);
-			}
+			return c.send("Our official webmap: \n<"+config.mapMain.url+">").catch(console.error);
 		}
 	}
 });
