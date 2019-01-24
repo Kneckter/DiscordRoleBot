@@ -3,7 +3,7 @@ This bot was forked from SimpleDiscordBot that has been discontinued since Jan 2
 
 # SimpleDiscordBot (Modified)
 
-SimpleDiscordBot using JavaScript, for basic fuctions and watching over a discord server.
+SimpleDiscordBot using JavaScript, for basic fuctions and watching over a discord server. This version has been modified to only provide the temp role features for managing roles that are linked to subscribers.
 
 # REQUIREMENTS:
 
