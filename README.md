@@ -1,9 +1,9 @@
 # NOTICE
 This bot was forked from SimpleDiscordBot that has been discontinued since Jan 29, 2018.
 
-# SimpleDiscordBot (Modified)
+# RoleDiscordBot
 
-SimpleDiscordBot using JavaScript, for basic fuctions and watching over a discord server. This version has been modified to only provide the temp role features for managing roles that are linked to subscribers.
+RoleDiscordBot uses JavaScript for automated management of temporary roles on a discord server. This bot is a modified version of SimpleDiscordBot for managing roles that are linked to subscribers.
 
 # REQUIREMENTS:
 
