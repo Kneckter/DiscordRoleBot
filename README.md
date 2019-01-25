@@ -49,3 +49,14 @@ RoleDiscordBot uses JavaScript for automated management of temporary roles on a 
 Using terminal, run `node adminBot.js`
 
 -If you close that window, the bot connection will be terminated!
+
+# USAGE:
+
+`!help`<br>
+--`!map`   »   a link to our web map<br>
+--`!subscribe`/`!paypal`   »   for a link to our PayPal<br>
+
+`!help mods`<br>
+--`!temprole @mention <DAYS> <ROLE-NAME>`   »   to assign a temporary roles<br>
+--`!temprole check @mention`   »   to check the time left on a temporary role assignment<br>
+--`!temprole remove @mention`   »   to remove a temporary role assignment<br>
