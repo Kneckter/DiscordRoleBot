@@ -53,6 +53,7 @@ Using terminal, run `node adminBot.js`
 # USAGE:
 
 `!help`<br>
+--`!check`   »   to check the time left on your subscription<br>
 --`!map`   »   a link to our web map<br>
 --`!subscribe`/`!paypal`   »   for a link to our PayPal<br>
 
@@ -60,3 +61,4 @@ Using terminal, run `node adminBot.js`
 --`!temprole @mention <DAYS> <ROLE-NAME>`   »   to assign a temporary roles<br>
 --`!temprole check @mention`   »   to check the time left on a temporary role assignment<br>
 --`!temprole remove @mention`   »   to remove a temporary role assignment<br>
+--`!temprole add @mention <DAYS>`   »   to add more time to a temporary role assignment<br>

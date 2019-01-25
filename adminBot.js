@@ -160,18 +160,16 @@ bot.on('message', message => {
 			if(m.roles.has(ModR.id) || m.roles.has(AdminR.id)) {
 				cmds="`!temprole @mention <DAYS> <ROLE-NAME>`   \\\u00BB   to assign a temporary roles\n"
 					+"`!temprole check @mention`   \\\u00BB   to check the time left on a temporary role assignment\n"
-					+"`!temprole remove @mention`   \\\u00BB   to remove a temporary role assignment\n";
+					+"`!temprole remove @mention`   \\\u00BB   to remove a temporary role assignment\n"
+					+"`!temprole add @mention <DAYS>`   \\\u00BB   to add more time to a temporary role assignment\n";
 				return c.send(cmds).catch(console.error);
 			}
 			else {
 				return message.reply("you are **NOT** allowed to use this command! \ntry using: `!commads`").catch(console.error); 
 			}
 		}
-		if(c.id!==config.botsupportChannelID){
-			return message.reply("this command can only be used at: <#"+config.botsupportChannelID+">");
-		}
 		if(!args[0]) { 
-			cmds="";
+			cmds="`!check`   \\\u00BB   to check the time left on your subscription\n";
 			if(config.mapMain.enabled==="yes"){ 
 				cmds+="`!map`   \\\u00BB   a link to our web map\n" 
 			}
@@ -214,7 +212,8 @@ bot.on('message', message => {
 				return message.reply("imcomplete data, please try: \n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
 			else {
-				let dateMultiplier=86400000; mentioned=message.mentions.members.first(); 
+				let dateMultiplier=86400000; 
+				mentioned=message.mentions.members.first(); 
 				
 				// CREATE DATABASE TABLE 
 				sql.run("CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT)").catch(console.error);
@@ -224,7 +223,7 @@ bot.on('message', message => {
 					mentioned=message.mentions.members.first(); 
 					sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
 						if(!row){
-							return message.reply("⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
+							return message.reply("⚠ [ERROR] "+mentioned.user.username+" is __NOT__ in the `DataBase`");
 						}
 						else {
 							let startDateVal=new Date(); 
@@ -235,7 +234,7 @@ bot.on('message', message => {
 							endDateVal.setTime(row.endDate); 
 							
 							finalDate=(endDateVal.getMonth()+1)+"/"+endDateVal.getDate()+"/"+endDateVal.getFullYear();
-							return c.send("✅ "+mentioned+" will lose the role: **"+row.temporaryRole+"** on: `"+finalDate+"`! They were added by: <@"+row.addedBy+"> on: `"+startDateVal+"`");
+							return c.send("✅ "+mentioned.user.username+" will lose the role: **"+row.temporaryRole+"** on: `"+finalDate+"`! They were added on: `"+startDateVal+"`");
 						}
 					}).catch(console.error); return
 				}
@@ -245,25 +244,58 @@ bot.on('message', message => {
 					mentioned=message.mentions.members.first(); 
 					sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
 						if(!row){
-							return message.reply("⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
+							return c.send("⚠ [ERROR] "+mentioned.user.username+" is __NOT__ in the `DataBase`");
 						}
 						else {
 							let theirRole=g.roles.find(theirRole => theirRole.name === row.temporaryRole);
 							mentioned.removeRole(theirRole).catch(console.error);
 							sql.get(`DELETE FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
-								return c.send("⚠ "+mentioned+" have **lost** their role of: **"+theirRole.name+"** and has been removed from my `DataBase`");
+								return c.send("⚠ "+mentioned.user.username+" has **lost** their role of: **"+theirRole.name+"** and has been removed from the `DataBase`");
 							});
 						}
 					}).catch(console.error); return
 				}
 				
+				// ADD TIME TO A USER
+				if(args[0]==="add"){
+					if(args[1] && !mentioned){
+						return message.reply("please `@mention` a person you want me to add time to...");
+					}
+					if(!args[2]){
+						return message.reply("for how **many** days do you want "+mentioned.user.username+" to have to have this role?");
+					}
+					else {
+						mentioned=message.mentions.members.first(); 
+						sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
+							if(!row){
+								return c.send("⚠ [ERROR] "+mentioned.user.username+" is __NOT__ in the `DataBase`");
+							}
+							else {
+								let startDateVal=new Date(); 
+								startDateVal.setTime(row.startDate); 
+								startDateVal=(startDateVal.getMonth()+1)+"/"+startDateVal.getDate()+"/"+startDateVal.getFullYear();
+
+								let endDateVal=new Date(); 
+								let finalDate=(parseInt(row.endDate)+parseInt((args[2])*(dateMultiplier))); 
+
+								sql.get(`UPDATE temporary_roles SET endDate="${finalDate}" WHERE userID="${mentioned.id}"`).then(row => {
+									endDateVal.setTime(finalDate);						
+									finalDate=(endDateVal.getMonth()+1)+"/"+endDateVal.getDate()+"/"+endDateVal.getFullYear();
+									return c.send("✅ "+mentioned.user.username+" has had time added until: `"+finalDate+"`! They were added on: `"+startDateVal+"`");
+								});
+							}
+						}).catch(console.error); return
+					}
+				}
+				
+
 				// CHECK AMOUNT OF DAYS WERE ADDED
 				if(!args[1]){
-					return message.reply("for how **many** days do you want "+mentioned+" to have this role?");
+					return message.reply("for how **many** days do you want "+mentioned.user.username+" to have to have this role?");
 				}
 				
 				if(!args[2]){
-					return message.reply("what role do you want to assign to "+mentioned+"?");
+					return message.reply("what role do you want to assign to "+mentioned.user.username+"?");
 				}
 				
 				// ROLES WITH SPACES - NEW
@@ -285,7 +317,7 @@ bot.on('message', message => {
 				// CHECK ROLE EXIST
 				let rName=g.roles.find(rName => rName.name === daRoles);
 				if(!rName){
-					return message.reply("I couldn't find such role, please check the spelling and try again.`");
+					return message.reply("I couldn't find such role, please check the spelling and try again.");
 				}
 				
 				// ADD MEMBER TO DATASE, AND ADD THE ROLE TO MEMBER
@@ -304,7 +336,7 @@ bot.on('message', message => {
 						let theirRole=g.roles.find(theirRole => theirRole.name === daRoles);
 						mentioned.addRole(theirRole).catch(console.error);
 						console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+mentioned.user.username+"\" ("+mentioned.id+") was given role: "+daRoles+" by: "+m.user.username+" ("+m.id+")");
-						return c.send("🎉 "+mentioned+" has been given a **temporary** role of: **"+daRoles+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
+						return c.send("🎉 "+mentioned.user.username+" has been given a **temporary** role of: **"+daRoles+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
 					}
 					else {
 						return message.reply("this user already has a **temporary** role... try using `!temprole remove @"+mentioned.user.username+"` if you want to **change** their role.");
@@ -318,6 +350,30 @@ bot.on('message', message => {
 		}
 	}
 
+// ############################## CHECK ##############################
+	if(command==="check"){
+		
+		let dateMultiplier=86400000; 
+
+		// CHECK DATABASE FOR ROLES
+		mentioned=m; 
+		sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
+			if(!row){
+				return message.reply("⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
+			}
+			else {
+				let startDateVal=new Date(); 
+				startDateVal.setTime(row.startDate); 
+				startDateVal=(startDateVal.getMonth()+1)+"/"+startDateVal.getDate()+"/"+startDateVal.getFullYear();
+
+				let endDateVal=new Date(); 
+				endDateVal.setTime(row.endDate); 
+
+				finalDate=(endDateVal.getMonth()+1)+"/"+endDateVal.getDate()+"/"+endDateVal.getFullYear();
+				return c.send("✅ You will lose the role: **"+row.temporaryRole+"** on: `"+finalDate+"`! The role was added on: `"+startDateVal+"`");
+			}
+		}).catch(console.error); return
+	}
 // ######################### MAP ###################################
 	if(command==="map") {
 		if(config.mapMain.enabled==="yes"){
