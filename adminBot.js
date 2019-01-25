@@ -5,37 +5,63 @@ const sql = require("sqlite");
 sql.open("./dataBase.sqlite");
 
 // COMMON VARIABLES
-var embedMSG=""; var skip=""; var msg1=""; var msg2="";
+var embedMSG="";
 
 bot.on('ready', () => {
 	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-	console.info(timeStampSys+'-- DISCORD HELPBOT [ADMIN] IS READY --');console.log(console.error);
+	let mo=CurrTime.getMonth()+1;
+		if(mo<10){mo="0"+mo;}
+	let da=CurrTime.getDate();
+		if(da<10){da="0"+da;}
+	let yr=CurrTime.getFullYear();
+	let hr=CurrTime.getHours();
+		if(hr<10){hr="0"+hr;}
+	let min=CurrTime.getMinutes();
+		if(min<10){min="0"+min;}
+	let sec=CurrTime.getSeconds();
+		if(sec<10){sec="0"+sec;}
+	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
+	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
+	console.info(timeStampSys+'-- DISCORD HELPBOT IS READY --');
 });
 
 // ##########################################################################
-// ############################# SERVER LISTNER #############################
+// ############################# SERVER LISTENER ############################
 // ##########################################################################
 
 // DATABASE TIMER FOR TEMPORARY ROLES
 setInterval(function(){
 	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
+	let mo=CurrTime.getMonth()+1;
+		if(mo<10){mo="0"+mo;}
+	let da=CurrTime.getDate();
+		if(da<10){da="0"+da;}
+	let yr=CurrTime.getFullYear();
+	let hr=CurrTime.getHours();
+		if(hr<10){hr="0"+hr;}
+	let min=CurrTime.getMinutes();
+		if(min<10){min="0"+min;}
+	let sec=CurrTime.getSeconds();
+		if(sec<10){sec="0"+sec;}
+	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
+	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
 	
-	let timeNow=new Date().getTime(); let dbTime=""; let daysLeft="";
+	let timeNow=new Date().getTime();
+	let dbTime="";
+	let daysLeft="";
 	sql.all(`SELECT * FROM temporary_roles`).then(rows => {
 		if (!rows) {
 			return console.info("No one is in the DataBase");
 		}
 		else {
 			for(rowNumber="0"; rowNumber<rows.length; rowNumber++){
-				dbTime=rows[rowNumber].endDate; daysLeft=(dbTime*1)-(timeNow*1);
+				dbTime=rows[rowNumber].endDate;
+				daysLeft=(dbTime*1)-(timeNow*1);
 				if(daysLeft<1){
-					member=bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID); if(!member){ member.user.username="<@"+rows[rowNumber].userID+">"; member.id=""; }
+					member=bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID); 
+						if(!member){ 
+							member.user.username="<@"+rows[rowNumber].userID+">"; member.id=""; 
+						}
 					console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+member.user.username+"\" ("+member.id+") have lost their role: "+rows[rowNumber].temporaryRole+"... time EXPIRED");
 					bot.channels.get(config.mainChannelID).send("⚠ <@"+rows[rowNumber].userID+"> have **lost** their role of: **"
 						+rows[rowNumber].temporaryRole+"** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
@@ -63,35 +89,66 @@ setInterval(function(){
 bot.on('message', message => {
 	
 	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
+	let mo=CurrTime.getMonth()+1;
+		if(mo<10){mo="0"+mo;}
+	let da=CurrTime.getDate();
+		if(da<10){da="0"+da;}
+	let yr=CurrTime.getFullYear();
+	let hr=CurrTime.getHours();
+		if(hr<10){hr="0"+hr;}
+	let min=CurrTime.getMinutes();
+		if(min<10){min="0"+min;}
+	let sec=CurrTime.getSeconds();
+		if(sec<10){sec="0"+sec;}
+	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
+	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
 	
 // ############################## COMMANDS BEGIN ##############################
 
 	// MAKE SURE ITS A COMMAND
-	if(!message.content.startsWith(config.cmdPrefix)){ return }
+	if(!message.content.startsWith(config.cmdPrefix)){ 
+		return 
+	}
 
 	//STOP SCRIPT IF DM/PM
-	if(message.channel.type=="dm"){ return }
+	if(message.channel.type=="dm"){ 
+		return 
+	}
 	
 	// GET CHANNEL INFO
-	let g=message.guild; let c=message.channel; let m=message.member; let msg=message.content; msg=msg.toLowerCase();
+	let g=message.guild; 
+	let c=message.channel; 
+	let m=message.member; 
+	let msg=message.content; 
+	msg=msg.toLowerCase();
 	
 	// GET TAGGED USER
-	let mentioned=""; if(message.mentions.users.first()){mentioned=message.mentions.users.first();}
+	let mentioned=""; 
+		if(message.mentions.users.first()){
+			mentioned=message.mentions.users.first();
+		}
 	
 	// REMOVE LETTER CASE (MAKE ALL LOWERCASE)
-	let command=msg.toLowerCase(); command=command.split(" ")[0]; command=command.slice(config.cmdPrefix.length);
+	let command=msg.toLowerCase(); 
+	command=command.split(" ")[0]; 
+	command=command.slice(config.cmdPrefix.length);
 	
 	// GET ARGUMENTS
-	let args=msg.split(" ").slice(1); skip="no";
+	let args=msg.split(" ").slice(1); 
+	skip="no";
 	
 	// GET ROLES FROM CONFIG
-	let AdminR=g.roles.find(role => role.name === config.adminRoleName); if(!AdminR){ AdminR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find admin role: "+config.adminRoleName); }
-	let ModR=g.roles.find(role => role.name === config.modRoleName); if(!ModR){ ModR={"id":"111111111111111111"}; console.info("[ERROR] [CONFIG] I could not find mod role: "+config.modRoleName); }
+	let AdminR=g.roles.find(role => role.name === config.adminRoleName); 
+		if(!AdminR){ 
+			AdminR={"id":"111111111111111111"}; 
+			console.info("[ERROR] [CONFIG] I could not find admin role: "+config.adminRoleName); 
+		}
+	let ModR=g.roles.find(role => role.name === config.modRoleName); 
+		if(!ModR){ 
+			ModR={"id":"111111111111111111"}; 
+			console.info("[ERROR] [CONFIG] I could not find mod role: "+config.modRoleName); 
+		}
 
-	
 // ############################################################################
 // ################################ COMMANDS ##################################
 // ############################################################################
@@ -115,8 +172,12 @@ bot.on('message', message => {
 		}
 		if(!args[0]) { 
 			cmds="";
-			if(config.mapMain.enabled==="yes"){ cmds+="`!map`   \\\u00BB   a link to our web map\n" }
-			if(config.paypal.enabled==="yes"){ cmds+="`!subscribe`/`!paypal`   \\\u00BB   for a link to our PayPal\n" }
+			if(config.mapMain.enabled==="yes"){ 
+				cmds+="`!map`   \\\u00BB   a link to our web map\n" 
+			}
+			if(config.paypal.enabled==="yes"){ 
+				cmds+="`!subscribe`/`!paypal`   \\\u00BB   for a link to our PayPal\n" 
+			}
 		}
 		return c.send(cmds).catch(console.error);
 	}
@@ -139,10 +200,10 @@ bot.on('message', message => {
 	if(command.startsWith("temprole") || command==="tr" || command==="trole"){
 		
 		// ROLES ARE CASE SENSITIVE TO RESET MESSAGE AND ARGUMENTS
-		msg=message.content; args=msg.split(" ").slice(1);
+		msg=message.content; 
+		args=msg.split(" ").slice(1);
 		
 		if(m.roles.has(ModR.id) || m.roles.has(AdminR.id) || m.id===config.ownerID){
-
 			if(!args[0]){
 				return message.reply("syntax:\n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention`\n or `!temprole check @mention`");
 			}
@@ -166,9 +227,13 @@ bot.on('message', message => {
 							return message.reply("⚠ [ERROR] "+mentioned+" is __NOT__ in my `DataBase`");
 						}
 						else {
-							let startDateVal=new Date(); startDateVal.setTime(row.startDate); 
+							let startDateVal=new Date(); 
+							startDateVal.setTime(row.startDate); 
 							startDateVal=(startDateVal.getMonth()+1)+"/"+startDateVal.getDate()+"/"+startDateVal.getFullYear();
-							let endDateVal=new Date(); endDateVal.setTime(row.endDate); 
+							
+							let endDateVal=new Date(); 
+							endDateVal.setTime(row.endDate); 
+							
 							finalDate=(endDateVal.getMonth()+1)+"/"+endDateVal.getDate()+"/"+endDateVal.getFullYear();
 							return c.send("✅ "+mentioned+" will lose the role: **"+row.temporaryRole+"** on: `"+finalDate+"`! They were added by: <@"+row.addedBy+"> on: `"+startDateVal+"`");
 						}
@@ -202,7 +267,16 @@ bot.on('message', message => {
 				}
 				
 				// ROLES WITH SPACES - NEW
-				let daRoles="";if(!args[3]){daRoles=args[2]}else{daRoles="";for(var x=2;x<args.length;x++){daRoles+=args[x]+" ";}daRoles=daRoles.slice(0,-1);}
+				let daRoles="";
+					if(!args[3]){
+						daRoles=args[2]
+					}else{
+						daRoles="";
+						for(var x=2;x<args.length;x++){
+							daRoles+=args[x]+" ";
+						}
+						daRoles=daRoles.slice(0,-1);
+					}
 				
 				if(!parseInt(args[1])){
 					return message.reply("Error: second value has to be **X** number of days, IE:\n`!"+command+" @"+mentioned.user.username+" 90 "+daRoles+"`");
@@ -218,9 +292,12 @@ bot.on('message', message => {
 				sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
 					mentioned=message.mentions.members.first(); 
 					if (!row) {
-						let curDate=new Date().getTime(); let finalDateDisplay=new Date(); 
-						let finalDate=((args[1])*(dateMultiplier)); finalDate=((curDate)+(finalDate));
-						finalDateDisplay.setTime(finalDate); finalDateDisplay=(finalDateDisplay.getMonth()+1)+"/"+finalDateDisplay.getDate()+"/"+finalDateDisplay.getFullYear();
+						let curDate=new Date().getTime(); 
+						let finalDateDisplay=new Date(); 
+						let finalDate=((args[1])*(dateMultiplier)); 
+						finalDate=((curDate)+(finalDate));
+						finalDateDisplay.setTime(finalDate); 
+						finalDateDisplay=(finalDateDisplay.getMonth()+1)+"/"+finalDateDisplay.getDate()+"/"+finalDateDisplay.getFullYear();
 						
 						sql.run("INSERT INTO temporary_roles (userID, temporaryRole, startDate, endDate, addedBy) VALUES (?, ?, ?, ?, ?)", 
 							[mentioned.id, daRoles, curDate, finalDate, m.id]);
@@ -256,9 +333,19 @@ bot.login(config.token);
 
 bot.on('disconnected', function (){
 	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;if(mo<10){mo="0"+mo;}let da=CurrTime.getDate();if(da<10){da="0"+da;}let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();if(hr<10){hr="0"+hr;}let min=CurrTime.getMinutes();if(min<10){min="0"+min;}let sec=CurrTime.getSeconds();if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-	console.info(timeStampSys+'-- Disconnected --');console.log(console.error);
+	let mo=CurrTime.getMonth()+1;
+		if(mo<10){mo="0"+mo;}
+	let da=CurrTime.getDate();
+		if(da<10){da="0"+da;}
+	let yr=CurrTime.getFullYear();
+	let hr=CurrTime.getHours();
+		if(hr<10){hr="0"+hr;}
+	let min=CurrTime.getMinutes();
+		if(min<10){min="0"+min;}
+	let sec=CurrTime.getSeconds();
+		if(sec<10){sec="0"+sec;}
+	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
+	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
+	console.info(timeStampSys+'-- Disconnected --');
 	process.exit(1);
 });
