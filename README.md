@@ -65,5 +65,4 @@ Using terminal, run `node adminBot.js`
 --`!temprole remove @mention`   »   to remove a temporary role assignment<br>
 --`!temprole add @mention <DAYS>`   »   to add more time to a temporary role assignment<br>
 
-The bot will automatically check for expired roles every minute after startup. If it finds an expired role, it will remove it and notify the admins.<br>
-If it finds a role that will expire in less than 5 days, it will notify the user through DM.
+The bot will automatically check for expired roles every minute after startup. If it finds an expired role, it will remove it and notify the admins. If it finds a role that will expire in less than 5 days, it will notify the user through DM and the admins in their channel.
