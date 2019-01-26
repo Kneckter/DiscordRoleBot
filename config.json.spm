@@ -12,15 +12,14 @@
 	
 	"mapMain": { 
 		"enabled": "yes", 
-		"url": "https://www.seattlepokemaps.com/"
+		"url": "https://www.anypokemap.com/"
 	},
 		
 	"paypal": { 
 		"enabled": "yes", 
-		"url": "https://www.paypal.me/Seattlepokemaps",
-		"img": "https://raw.githubusercontent.com/JennerPalacios/SimpleDiscordBot/master/img/LogoOutLine.png"
+		"url": "https://www.paypal.me/DiscordRoleBot",
+		"img": "https://raw.githubusercontent.com/Kneckter/RoleDiscordBot/master/paypal_icon.jpg"
 	},
 	
-	"mainChannelID": "287841818945781760",
-	"botsupportChannelID": "299289845086289930"
+	"mainChannelID": "287841818945781760"
 }

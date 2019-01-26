@@ -4,25 +4,14 @@ const config=require('./config.json');
 const sql = require("sqlite");
 sql.open("./dataBase.sqlite");
 
-// COMMON VARIABLES
-var embedMSG="";
+// log our bot in
+bot.login(config.token);
 
 bot.on('ready', () => {
-	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;
-		if(mo<10){mo="0"+mo;}
-	let da=CurrTime.getDate();
-		if(da<10){da="0"+da;}
-	let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();
-		if(hr<10){hr="0"+hr;}
-	let min=CurrTime.getMinutes();
-		if(min<10){min="0"+min;}
-	let sec=CurrTime.getSeconds();
-		if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
-	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-	console.info(timeStampSys+'-- DISCORD HELPBOT IS READY --');
+	console.info(GetTimestamp()+'-- DISCORD ROLE BOT IS READY --');
+	
+	// CREATE DATABASE TABLE IF NEEDED
+	CreateDB()
 });
 
 // ##########################################################################
@@ -31,24 +20,11 @@ bot.on('ready', () => {
 
 // DATABASE TIMER FOR TEMPORARY ROLES
 setInterval(function(){
-	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;
-		if(mo<10){mo="0"+mo;}
-	let da=CurrTime.getDate();
-		if(da<10){da="0"+da;}
-	let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();
-		if(hr<10){hr="0"+hr;}
-	let min=CurrTime.getMinutes();
-		if(min<10){min="0"+min;}
-	let sec=CurrTime.getSeconds();
-		if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
-	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-	
 	let timeNow=new Date().getTime();
 	let dbTime="";
 	let daysLeft="";
+	let notify="";
+	
 	sql.all(`SELECT * FROM temporary_roles`).then(rows => {
 		if (!rows) {
 			return console.info("No one is in the DataBase");
@@ -56,55 +32,65 @@ setInterval(function(){
 		else {
 			for(rowNumber="0"; rowNumber<rows.length; rowNumber++){
 				dbTime=rows[rowNumber].endDate;
+				notify=rows[rowNumber].notified;
 				daysLeft=(dbTime*1)-(timeNow*1);
+
+				let rName=bot.guilds.get(config.serverID).roles.find(rName => rName.name === rows[rowNumber].temporaryRole); 
+				member=bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID); 
+				
+				// CHECK IF THEIR ACCESS HAS EXPIRED
 				if(daysLeft<1){
-					member=bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID); 
-						if(!member){ 
-							member.user.username="<@"+rows[rowNumber].userID+">"; member.id=""; 
-						}
-					console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+member.user.username+"\" ("+member.id+") have lost their role: "+rows[rowNumber].temporaryRole+"... time EXPIRED");
-					bot.channels.get(config.mainChannelID).send("⚠ <@"+rows[rowNumber].userID+"> have **lost** their role of: **"
-						+rows[rowNumber].temporaryRole+"** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
-					
+					if(!member){ 
+						member.user.username="<@"+rows[rowNumber].userID+">"; member.id=""; 
+					}
+
 					// REMOVE ROLE FROM MEMBER IN GUILD
-					let rName=bot.guilds.get(config.serverID).roles.find(rName => rName.name === rows[rowNumber].temporaryRole); 
-					bot.guilds.get(config.serverID).members.get(rows[rowNumber].userID).removeRole(rName).catch(console.error);
+					member.removeRole(rName).catch(console.error);
 					
+					bot.channels.get(config.mainChannelID).send("⚠ "+member.user.username+" has **lost** their role of: **"
+						+rows[rowNumber].temporaryRole+"** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
+
 					// REMOVE DATABASE ENTRY
 					sql.get(`DELETE FROM temporary_roles WHERE userID="${rows[rowNumber].userID}"`).catch(console.error);
+
+					console.log(GetTimestamp()+"[ADMIN] [TEMPORARY-ROLE] \""+member.user.username+"\" ("+member.id+") have lost their role: "+rows[rowNumber].temporaryRole+"... time EXPIRED");
+				}
+				
+				// CHECK IF THEIR ONLY HAVE 5 DAYS LEFT
+				if(daysLeft<432000000 && notify=="0"){
+					if(!member){ 
+						member.user.username="<@"+rows[rowNumber].userID+">"; member.id=""; 
+					}
+
+					// NOTIFY THE USER IN DM THAT THEY WILL EXPIRE
+					member.send("Hello "+member.user.username+"! Your role of **"+rows[rowNumber].temporaryRole+"** on "+bot.guilds.get(config.serverID)+" will be removed in less than 5 days. "
+								+"If you would like to keep the role, please notify an admin. "
+								+"You can use the `!help` command on the server for more information.").catch(error => {
+						console.error(GetTimestamp()+"Failed to send a DM to user: "+member.id);
+					});
+					
+					// NOTIFY THE ADMINS OF THE PENDING EXPIRY
+					bot.channels.get(config.mainChannelID).send("⚠ "+member.user.username+" will lose their role of: **"+rows[rowNumber].temporaryRole+"** in less than 5 days").catch(console.error);
+					
+					// UPDATE THE DB TO REMEMBER THAT THEY WERE NOTIFIED
+					sql.get(`UPDATE temporary_roles SET notified=1 WHERE userID="${rows[rowNumber].userID}"`);
+
+					console.log(GetTimestamp()+"[ADMIN] [TEMPORARY-ROLE] \""+member.user.username+"\" ("+member.id+") has been notified that they will lose their role in less than 5 days");
 				}
 			}
 		}
 	}).catch(console.error);
-},3600000);
-// 86400000 = 24hrs
-// 43200000 = 12hrs
-// 21600000 = 6hrs
-// 10800000 = 3hrs 
+	console.log(GetTimestamp()+"[ADMIN] Stored accounts checked for expiry and nofication.");
+},60000);
+// 86400000 = 1day
 // 3600000 = 1hr
+// 60000 = 1min
 
 // ##########################################################################
 // ############################## TEXT MESSAGE ##############################
 // ##########################################################################
 bot.on('message', message => {
 	
-	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;
-		if(mo<10){mo="0"+mo;}
-	let da=CurrTime.getDate();
-		if(da<10){da="0"+da;}
-	let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();
-		if(hr<10){hr="0"+hr;}
-	let min=CurrTime.getMinutes();
-		if(min<10){min="0"+min;}
-	let sec=CurrTime.getSeconds();
-		if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
-	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-	
-// ############################## COMMANDS BEGIN ##############################
-
 	// MAKE SURE ITS A COMMAND
 	if(!message.content.startsWith(config.cmdPrefix)){ 
 		return 
@@ -215,9 +201,6 @@ bot.on('message', message => {
 				let dateMultiplier=86400000; 
 				mentioned=message.mentions.members.first(); 
 				
-				// CREATE DATABASE TABLE 
-				sql.run("CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT)").catch(console.error);
-				
 				// CHECK DATABASE FOR ROLES
 				if(args[0]==="check"){
 					mentioned=message.mentions.members.first(); 
@@ -278,7 +261,7 @@ bot.on('message', message => {
 								let endDateVal=new Date(); 
 								let finalDate=(parseInt(row.endDate)+parseInt((args[2])*(dateMultiplier))); 
 
-								sql.get(`UPDATE temporary_roles SET endDate="${finalDate}" WHERE userID="${mentioned.id}"`).then(row => {
+								sql.get(`UPDATE temporary_roles SET endDate="${finalDate}", notified=0 WHERE userID="${mentioned.id}"`).then(row => {
 									endDateVal.setTime(finalDate);						
 									finalDate=(endDateVal.getMonth()+1)+"/"+endDateVal.getDate()+"/"+endDateVal.getFullYear();
 									return c.send("✅ "+mentioned.user.username+" has had time added until: `"+finalDate+"`! They were added on: `"+startDateVal+"`");
@@ -300,15 +283,15 @@ bot.on('message', message => {
 				
 				// ROLES WITH SPACES - NEW
 				let daRoles="";
-					if(!args[3]){
-						daRoles=args[2]
-					}else{
-						daRoles="";
-						for(var x=2;x<args.length;x++){
-							daRoles+=args[x]+" ";
-						}
-						daRoles=daRoles.slice(0,-1);
+				if(!args[3]){
+					daRoles=args[2]
+				}else{
+					daRoles="";
+					for(var x=2;x<args.length;x++){
+						daRoles+=args[x]+" ";
 					}
+					daRoles=daRoles.slice(0,-1);
+				}
 				
 				if(!parseInt(args[1])){
 					return message.reply("Error: second value has to be **X** number of days, IE:\n`!"+command+" @"+mentioned.user.username+" 90 "+daRoles+"`");
@@ -331,11 +314,11 @@ bot.on('message', message => {
 						finalDateDisplay.setTime(finalDate); 
 						finalDateDisplay=(finalDateDisplay.getMonth()+1)+"/"+finalDateDisplay.getDate()+"/"+finalDateDisplay.getFullYear();
 						
-						sql.run("INSERT INTO temporary_roles (userID, temporaryRole, startDate, endDate, addedBy) VALUES (?, ?, ?, ?, ?)", 
+						sql.run("INSERT INTO temporary_roles (userID, temporaryRole, startDate, endDate, addedBy, notified) VALUES (?, ?, ?, ?, ?, 0)", 
 							[mentioned.id, daRoles, curDate, finalDate, m.id]);
 						let theirRole=g.roles.find(theirRole => theirRole.name === daRoles);
 						mentioned.addRole(theirRole).catch(console.error);
-						console.log(timeStampSys+"[ADMIN] [TEMPORARY-ROLE] \""+mentioned.user.username+"\" ("+mentioned.id+") was given role: "+daRoles+" by: "+m.user.username+" ("+m.id+")");
+						console.log(GetTimestamp()+"[ADMIN] [TEMPORARY-ROLE] \""+mentioned.user.username+"\" ("+mentioned.id+") was given role: "+daRoles+" by: "+m.user.username+" ("+m.id+")");
 						return c.send("🎉 "+mentioned.user.username+" has been given a **temporary** role of: **"+daRoles+"**, enjoy! They will lose this role on: `"+finalDateDisplay+"`");
 					}
 					else {
@@ -354,7 +337,7 @@ bot.on('message', message => {
 	if(command==="check"){
 		
 		let dateMultiplier=86400000; 
-
+		
 		// CHECK DATABASE FOR ROLES
 		mentioned=m; 
 		sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}"`).then(row => {
@@ -382,26 +365,62 @@ bot.on('message', message => {
 	}
 });
 
+function GetTimestamp()
+{
+    let now = new Date();
+
+    return "["+now.toLocaleString()+"]";
+}
+
+function RestartBot(type)
+{
+    if(type == 'manual'){ process.exit(1); }
+    else{
+        console.error(GetTimestamp()+"Unexpected error, bot stopping, likely websocket");  
+        process.exit(1);
+    }
+    return;
+}
+
+function CreateDB()
+{
+	// CREATE DATABASE TABLE 
+	sql.run("CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT, notified TEXT)").catch(console.error);
+	return;				
+}
 
 
-// log our bot in
-bot.login(config.token);
+bot.on('error', function(err)  {      
+    if(typeof err == 'object')
+    {
+        err = JSON.stringify(err);
+    }
+    console.error(GetTimestamp()+'Uncaught exception: '+err);
+    RestartBot();
+    return;
+});
 
-bot.on('disconnected', function (){
-	let CurrTime=new Date();
-	let mo=CurrTime.getMonth()+1;
-		if(mo<10){mo="0"+mo;}
-	let da=CurrTime.getDate();
-		if(da<10){da="0"+da;}
-	let yr=CurrTime.getFullYear();
-	let hr=CurrTime.getHours();
-		if(hr<10){hr="0"+hr;}
-	let min=CurrTime.getMinutes();
-		if(min<10){min="0"+min;}
-	let sec=CurrTime.getSeconds();
-		if(sec<10){sec="0"+sec;}
-	let timeStamp="`"+yr+"/"+mo+"/"+da+"` **@** `"+hr+":"+min+":"+sec+"`";
-	let timeStampSys="["+yr+"/"+mo+"/"+da+" @ "+hr+":"+min+":"+sec+"] ";
-	console.info(timeStampSys+'-- Disconnected --');
-	process.exit(1);
+process.on('uncaughtException', function(err) { 
+    if(typeof err == 'object')
+    {
+        err = JSON.stringify(err);
+    }
+    console.error(GetTimestamp()+'Uncaught exception: '+err);
+    RestartBot();
+    return;
+});
+
+process.on('unhandledRejection', function(err) {  
+    if(typeof err == 'object')
+    {
+        err = JSON.stringify(err);
+    } 
+    console.error(GetTimestamp()+'Uncaught exception: '+err);
+    RestartBot();
+    return;
+});
+
+bot.on('disconnect', function(closed) {
+    console.error(GetTimestamp()+'Disconnected from Discord'); 
+    return;   
 });

@@ -1,9 +1,9 @@
 # NOTICE
 This bot was forked from SimpleDiscordBot that has been discontinued since Jan 29, 2018.
 
-# RoleDiscordBot
+# DiscordRoleBot
 
-RoleDiscordBot uses JavaScript for automated management of temporary roles on a discord server. This bot is a modified version of SimpleDiscordBot for managing roles that are linked to subscribers.
+DiscordRoleBot uses JavaScript for automated management of temporary roles on a discord server. This bot is a modified version of SimpleDiscordBot for managing roles that are linked to subscribers.
 
 # REQUIREMENTS:
 
@@ -41,6 +41,8 @@ RoleDiscordBot uses JavaScript for automated management of temporary roles on a 
    * Use the URL that page generates and go to it, and you will be asked to log into your discord. You will need **Admin** access in order to get the bot to join that server.
 
 7. Fill out the information needed in `config.json` (use example or spm as example).
+   * The mainChannelID could be a channel that only admin/mod/owner have access to. It reports expired roles. 
+     * You can also use this channel to @usernames without them getting notified because people cannot see tags to channels they cannot access.
 
 <hr />
 
@@ -62,3 +64,6 @@ Using terminal, run `node adminBot.js`
 --`!temprole check @mention`   »   to check the time left on a temporary role assignment<br>
 --`!temprole remove @mention`   »   to remove a temporary role assignment<br>
 --`!temprole add @mention <DAYS>`   »   to add more time to a temporary role assignment<br>
+
+The bot will automatically check for expired roles every minute after startup. If it finds an expired role, it will remove it and notify the admins.<br>
+If it finds a role that will expire in less than 5 days, it will notify the user through DM.
