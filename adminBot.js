@@ -80,7 +80,7 @@ setInterval(function(){
 			}
 		}
 	}).catch(console.error);
-	console.log(GetTimestamp()+"[ADMIN] Stored accounts checked for expiry and nofication.");
+	//console.log(GetTimestamp()+"[ADMIN] Stored accounts checked for expiry and nofication.");
 },60000);
 // 86400000 = 1day
 // 3600000 = 1hr
