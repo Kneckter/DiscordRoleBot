@@ -1,7 +1,6 @@
-# NOTICE
-This bot was forked from SimpleDiscordBot that has been discontinued since Jan 29, 2018.
-
 # DiscordRoleBot
+
+This bot was forked from SimpleDiscordBot that has been discontinued since Jan 29, 2018.
 
 DiscordRoleBot uses JavaScript for automated management of temporary roles on a discord server. This bot is a modified version of SimpleDiscordBot for managing roles that are linked to subscribers.
 
