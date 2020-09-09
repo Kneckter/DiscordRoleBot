@@ -51,9 +51,9 @@ Instead, add it to PM2 with `pm2 start ecosystem.config.js`
 
 `!help mods`<br>
 --`!temprole @mention <DAYS> <ROLE-NAME>`   »   to assign a temporary roles<br>
---`!temprole check @mention`   »   to check the time left on a temporary role assignment<br>
---`!temprole remove @mention`   »   to remove a temporary role assignment<br>
---`!temprole add @mention <DAYS>`   »   to add more time to a temporary role assignment<br>
+--`!temprole check @mention <ROLE-NAME>`   »   to check the time left on a temporary role assignment<br>
+--`!temprole remove @mention <ROLE-NAME>`   »   to remove a temporary role assignment<br>
+--`!temprole add @mention <DAYS> <ROLE-NAME>`   »   to add more time to a temporary role assignment<br>
 --`!message <min-seconds> <max-seconds>`   »   to bulk delete messages. min and max are optional<br>
 
 The bot will automatically check for expired roles every minute after startup. 
