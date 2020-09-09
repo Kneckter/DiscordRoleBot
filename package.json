@@ -1,0 +1,24 @@
+{
+  "name": "DiscordRoleBot",
+  "version": "1.1.0",
+  "description": "",
+  "main": "adminBot.js",
+  "scripts": {
+    "start": "node adminBot.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kneckter/DiscordRoleBot.git"
+  },
+  "author": "Kneckter",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kneckter/DiscordRoleBot/issues"
+  },
+  "homepage": "https://github.com/Kneckter/DiscordRoleBot#readme",
+  "dependencies": {
+    "discord.js": "12.3.1",
+    "node-schedule": "1.3.2",
+    "sqlite3": "5.0.0"
+  }
+}

@@ -4,23 +4,25 @@
 	"ownerID": "YOUR-PERSONAL-USER-ID",
 	"serverName": "YOUR-SERVER-NAME",
 	"serverID": "YOUR-SERVER-ID",
-	
 	"cmdPrefix": "!",
-	
 	"adminRoleName": "ADMIN-ROLE-NAME",
 	"modRoleName": "MODERATOR-ROLE-NAME",
-	
 	"mapMain": { 
 		"enabled": "no", 
 		"url": "MAP-URL-LINK"
 	},
-		
 	"paypal": { 
 		"enabled": "no", 
 		"url": "PAYPAL-URL-LINK",
 		"img": "https://raw.githubusercontent.com/Kneckter/RoleDiscordBot/master/paypal_icon.jpg"
 	},
-	
-	"mainChannelID": "MAIN-CHAT-CHANNEL-ID"
+	"mainChannelID": "MAIN-CHAT-CHANNEL-ID",
+    "clearAtMidnight": [
+        "CHANNEL-ID-1",
+        "CHANNEL-ID-2"
+    ],
+    "clearEveryHourButSkip6am": [],
+    "clearEvery5min": [],
+    "clearWeeklyOnThursday630": [],
+    "clearMonthlyAtMidnightDay1": []
 }
-
