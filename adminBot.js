@@ -36,6 +36,7 @@ setInterval(function(){
         }
         else {
             for(rowNumber="0"; rowNumber<rows.length; rowNumber++){
+                let member = [];
                 dbTime=rows[rowNumber].endDate;
                 notify=rows[rowNumber].notified;
                 daysLeft=(dbTime*1)-(timeNow*1);
@@ -43,14 +44,20 @@ setInterval(function(){
                 let rName=bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
                 member=bot.guilds.cache.get(config.serverID).members.cache.get(rows[rowNumber].userID);
 
+                /*console.log("member.user.username: "+member.user.username);
+                console.log("timeNow: "+timeNow);
+                console.log("dbTime: "+dbTime);
+                console.log("daysLeft: "+daysLeft);*/
+
                 // CHECK IF THEIR ACCESS HAS EXPIRED
                 if(daysLeft<1){
                     if(!member){
-                        member.user.username="<@"+rows[rowNumber].userID+">"; member.id="";
+                        member.user.username="<@"+rows[rowNumber].userID+">";
+                        member.id=rows[rowNumber].userID;
                     }
 
                     // REMOVE ROLE FROM MEMBER IN GUILD
-                    member.roles.remove(rName).then((removed) => {
+                    member.roles.remove(rName).then(member => {
                         bot.channels.cache.get(config.mainChannelID).send("⚠ "+member.user.username+" has **lost** their role of: **"
                         +rName.name+"** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
 
@@ -614,6 +621,10 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999)
             //console.log(GetTimestamp()+"Finshed clearing channel with bulk delete: " + channel.name);
             return;
         }
+    }).catch(error => {
+        console.error(GetTimestamp()+"Failed to bulk delete messages in "+channel.name+". Trying single message delete.");
+        DeleteSingleMessages(channel, MinSeconds, MaxSeconds);
+        return;
     });
 }
 
@@ -655,7 +666,6 @@ async function DeleteSingleMessages(channel, MinSeconds, MaxSeconds = 999999999)
         }
     }).catch(error => {
         console.error(GetTimestamp()+"Failed to clear channel single messages in "+channel.name);
-        channel.send("Failed to clear channel single messages in "+channel.name).catch(console.error);
         return;
     });
 }
