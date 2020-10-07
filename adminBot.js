@@ -584,7 +584,6 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999)
 
     if(!channel) {
         console.error(GetTimestamp()+"Could not find a channel");
-        channel.send("Could not find a channel").catch(console.error);
         return;
     }
 
