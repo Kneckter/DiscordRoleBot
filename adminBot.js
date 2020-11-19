@@ -117,7 +117,7 @@ setInterval(function(){
                     }
                     else {
                         member.send("Hello "+member.user.username+"! Your role of **"+rows[rowNumber].temporaryRole+"** on "
-                                    +bot.guilds.get(config.serverID).name+" will be removed in less than 5 days on "+finalDate
+                                    +bot.guilds.cache.get(config.serverID).name+" will be removed in less than 5 days on "+finalDate
                                     +". If you would like to keep the role, please notify an admin. "
                                     +"You can use the `!help` command on the server for more information.").catch(error => {
                             console.error(GetTimestamp()+"Failed to send a DM to user: "+member.id);
