@@ -52,8 +52,16 @@ setInterval(function(){
                 // CHECK IF THEIR ACCESS HAS EXPIRED
                 if(daysLeft<1){
                     if(!member){
-                        member.user.username="<@"+rows[rowNumber].userID+">";
-                        member.id=rows[rowNumber].userID;
+                        try{
+                            member.user.username="<@"+rows[rowNumber].userID+">";
+                            member.id=rows[rowNumber].userID;
+                        }
+                        catch(err){
+                            console.error(GetTimestamp()+"Failed to find a user for ID: "+rows[rowNumber].userID+". They may have left the server.");
+                            bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: "
+                            +rows[rowNumber].userID+". They may have left the server.**").catch(console.error);
+                            continue;
+                        }
                     }
 
                     // REMOVE ROLE FROM MEMBER IN GUILD
@@ -80,7 +88,16 @@ setInterval(function(){
                 // CHECK IF THERE ARE ONLY HAVE 5 DAYS LEFT
                 if(daysLeft<432000000 && notify=="0"){
                     if(!member){
-                        member.user.username="<@"+rows[rowNumber].userID+">"; member.id="";
+                        try{
+                            member.user.username="<@"+rows[rowNumber].userID+">";
+                            member.id=rows[rowNumber].userID;
+                        }
+                        catch(err){
+                            console.error(GetTimestamp()+"Failed to find a user for ID: "+rows[rowNumber].userID+". They may have left the server.");
+                            bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: "
+                            +rows[rowNumber].userID+". They may have left the server.**").catch(console.error);
+                            continue;
+                        }
                     }
 
                     let endDateVal=new Date();
@@ -636,12 +653,6 @@ async function DeleteSingleMessages(channel, MinSeconds, MaxSeconds = 999999999)
         MaxFlake = 0
     }
 
-    if(!channel) {
-        console.error(GetTimestamp()+"Could not find a channel");
-        channel.send("Could not find a channel").catch(console.error);
-        return;
-    }
-
     channel.messages.fetch({limit:99, after:MaxFlake, before:MinFlake}).then(async messages => {
         let filterMessages = []
 
@@ -653,9 +664,11 @@ async function DeleteSingleMessages(channel, MinSeconds, MaxSeconds = 999999999)
         }
         if(filterMessages.length > 0) {
             for(const message of filterMessages.values()) {
-                //console.log(GetTimestamp()+"message.id: " + message.id);
-                message.delete().catch(console.error);
-                await wait(4000);
+                if(!message.deleted) {
+                    //console.log(GetTimestamp()+"message.id: " + message.id);
+                    message.delete().catch();
+                    await wait(4000);
+                }
             }
             DeleteSingleMessages(channel, MinSeconds, MaxSeconds);
         }
