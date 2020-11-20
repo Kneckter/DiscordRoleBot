@@ -555,7 +555,7 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999) {
         //console.log(GetTimestamp() + "MinFlake: " + MinFlake + " MaxFlake: " + MaxFlake);
         for(const message of messages.values()) {
             //console.log(GetTimestamp()+"message.id: " + message.id);
-            if(message.id > TwoWeeks && message.id < MinFlake) {
+            if(message.id > TwoWeeks && message.id < MinFlake && !message.deleted) {
                 filterMessages.push(message)
             }
         }
