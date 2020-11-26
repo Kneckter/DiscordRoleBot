@@ -1,9 +1,20 @@
+//paypal orders table; paypal payments table
+//Change commands to query the DB instead of sqlite
+//Post to the channel when an order/payment is received, how much, and for whom
+//Update the example config
+//Check that all logs have timestamps
+//Package the payment.php?
+//Add onGuildMember events from authBot?
 const Discord = require('discord.js');
 const bot = new Discord.Client();
 const config = require('./config.json');
 const schedule = require('node-schedule');
+const express = require('express');
+const helmet = require('helmet');
+const app = express();
 const sqlite3 = require('sqlite3');
-var sql = new sqlite3.Database('./dataBase.sqlite');
+const sql = new sqlite3.Database('./dataBase.sqlite');
+const mysql = require('mysql');
 const wait = async ms => new Promise(done => setTimeout(done, ms));
 
 // log our bot in
@@ -11,121 +22,165 @@ bot.login(config.token);
 
 bot.on('ready', () => {
     console.info(GetTimestamp() + '-- DISCORD ROLE BOT IS READY --');
-    // CREATE DATABASE TABLE IF NEEDED
-    CreateDB();
+    // Create/Check DB and then check users for roles
+    SQLConnect().then(users => {
+        InitDB();
+        UpdateUsers();
+    }).catch((err) => {console.error(GetTimestamp()+err);});
 });
+
+(async () => {
+    if (config.payments.enabled == "yes" ) {
+        // Basic security protection middleware
+        app.use(helmet());
+
+        // Body parsing middleware
+        app.use(express.json({ limit: '5kb' }));
+
+        // Parsing routes
+        app.get('/', (req, res) => res.send('Listening...'));
+        app.post('/', (req, res) => {
+            const body = req.body;
+            console.log(GetTimestamp()+'[Webhook Test] Received webhook payload: ', body);
+            res.send('OK');
+        });
+        app.get('/paypal', (req, res) => {
+            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+            }
+            else {
+                var clientip = 'unknown'
+            }
+            console.log(GetTimestamp()+'[Webhook Test] Someone stopped by from: ', clientip);
+            res.send('Listening...');
+        });
+        app.post('/paypal', async (req, res) => {
+            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+            }
+            else {
+                var clientip = 'unknown'
+            }
+            console.log(GetTimestamp()+'[handlePayPalData] Incoming POST from: ', clientip);
+            await handlePayPalData(req, res);
+        });
+        app.listen(config.payments.port, config.payments.server, () => console.log(GetTimestamp()+`Listening on ${config.payments.server}:${config.payments.port}...`));
+    }
+})();
 
 // ##########################################################################
 // ############################# SERVER LISTENER ############################
 // ##########################################################################
 // DATABASE TIMER FOR TEMPORARY ROLES
-setInterval(function() {
+setInterval(async function() {
     let timeNow = new Date().getTime();
     let dbTime = "";
     let daysLeft = "";
     let notify = "";
-    sql.all(`SELECT * FROM temporary_roles`, (err, rows) => {
-        if(err) {
-            console.error(err.message);
-        }
-        if(!rows) {
-            return console.info("No one is in the DataBase");
-        }
-        else {
-            for(rowNumber = "0"; rowNumber < rows.length; rowNumber++) {
-                let member = [];
-                dbTime = rows[rowNumber].endDate;
-                notify = rows[rowNumber].notified;
-                daysLeft = (dbTime * 1) - (timeNow * 1);
-                let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
-                member = bot.guilds.cache.get(config.serverID).members.cache.get(rows[rowNumber].userID);
-                /*console.log("member.user.username: "+member.user.username);
-                console.log("timeNow: "+timeNow);
-                console.log("dbTime: "+dbTime);
-                console.log("daysLeft: "+daysLeft);*/
-                // CHECK IF THEIR ACCESS HAS EXPIRED
-                if(daysLeft < 1) {
-                    if(!member) {
-                        try {
-                            member.user.username = "<@" + rows[rowNumber].userID + ">";
-                            member.id = rows[rowNumber].userID;
-                        }
-                        catch (err) {
-                            console.error(GetTimestamp() + "Failed to find a user for ID: " + rows[rowNumber].userID + ". They may have left the server.");
-                            bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: " +
-                                rows[rowNumber].userID + ". They may have left the server.**").catch(console.error);
-                            continue;
-                        }
-                    }
-                    // REMOVE ROLE FROM MEMBER IN GUILD
-                    member.roles.remove(rName).then(member => {
-                        bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " has **lost** their role of: **" +
-                            rName.name + "** - their **temporary** access has __EXPIRED__ 😭 ").catch(console.error);
-                        // REMOVE DATABASE ENTRY
-                        sql.run(`DELETE FROM temporary_roles WHERE userID='${member.id}' AND temporaryRole='${rName.name}'`, (err) => {
-                            if(err) {
-                                console.error(err.message);
+    await query(`SELECT * FROM temporary_roles`)
+        .then(async rows => {
+            if(!rows) {
+                return console.info("No one is in the DataBase");
+            }
+            else {
+                for(rowNumber = "0"; rowNumber < rows.length; rowNumber++) {
+                    let member = [];
+                    dbTime = rows[rowNumber].endDate;
+                    notify = rows[rowNumber].notified;
+                    daysLeft = (dbTime * 1) - (timeNow * 1);
+                    let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
+                    member = bot.guilds.cache.get(config.serverID).members.cache.get(rows[rowNumber].userID);
+                    /*console.log("member.user.username: "+member.user.username);
+                    console.log("timeNow: "+timeNow);
+                    console.log("dbTime: "+dbTime);
+                    console.log("daysLeft: "+daysLeft);*/
+                    // CHECK IF THEIR ACCESS HAS EXPIRED
+                    if(daysLeft < 1) {
+                        if(!member) {
+                            try {
+                                member.user.username = "<@" + rows[rowNumber].userID + ">";
+                                member.id = rows[rowNumber].userID;
                             }
+                            catch (err) {
+                                console.error(GetTimestamp() + "Failed to find a user for ID: " + rows[rowNumber].userID + ". They may have left the server.");
+                                bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: " +
+                                    rows[rowNumber].userID + ". They may have left the server.**").catch((err) => {console.error(GetTimestamp()+err);});
+                                continue;
+                            }
+                        }
+                        // REMOVE ROLE FROM MEMBER IN GUILD
+                        member.roles.remove(rName).then(async member => {
+                            bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " has **lost** their role of: **" +
+                                rName.name + "** - their **temporary** access has __EXPIRED__ 😭 ").catch((err) => {console.error(GetTimestamp()+err);});
+                            // REMOVE DATABASE ENTRY
+                            await query(`DELETE FROM temporary_roles WHERE userID='${member.id}' AND temporaryRole='${rName.name}'`)
+                                .catch(err => {
+                                    console.error(GetTimestamp()+`[InitDB] Failed to execute query 2: (${err})`);
+                                    process.exit(-1);
+                                });
+                            console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" + member.id +
+                                ") have lost their role: " + rName.name + "... time EXPIRED");
+                        }).catch(error => {
+                            console.error(GetTimestamp() + error.message);
+                            bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not remove the " +
+                                rName.name + " role from " + member.user.username + "!**").catch((err) => {console.error(GetTimestamp()+err);});
                         });
+                    }
+                    // CHECK IF THERE ARE ONLY HAVE 5 DAYS LEFT
+                    if(daysLeft < 432000000 && notify == "0") {
+                        if(!member) {
+                            try {
+                                member.user.username = "<@" + rows[rowNumber].userID + ">";
+                                member.id = rows[rowNumber].userID;
+                            }
+                            catch (err) {
+                                console.error(GetTimestamp() + "Failed to find a user for ID: " + rows[rowNumber].userID + ". They may have left the server.");
+                                bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: " +
+                                    rows[rowNumber].userID + ". They may have left the server.**").catch((err) => {console.error(GetTimestamp()+err);});
+                                continue;
+                            }
+                        }
+                        let endDateVal = new Date();
+                        endDateVal.setTime(dbTime);
+                        let finalDate = endDateVal.getFullYear() + "-" + (endDateVal.getMonth() + 1) + "-" + endDateVal.getDate() + " @" +
+                            endDateVal.getHours() + ":" + endDateVal.getMinutes() + ":" + endDateVal.getSeconds();
+                        // NOTIFY THE USER IN DM THAT THEY WILL EXPIRE
+                        if(config.paypal.enabled === "yes") {
+                            member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
+                                bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on " + finalDate +
+                                ". If you would like to keep the role, please send a payment to <" + config.paypal.url +
+                                ">. If you need help, please notify an admin. " +
+                                "You can use the `!help` command on the server for more information.").catch(error => {
+                                console.error(GetTimestamp() + "Failed to send a DM to user: " + member.id);
+                            });
+                        }
+                        else {
+                            member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
+                                bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on " + finalDate +
+                                ". If you would like to keep the role, please notify an admin. " +
+                                "You can use the `!help` command on the server for more information.").catch(error => {
+                                console.error(GetTimestamp() + "Failed to send a DM to user: " + member.id);
+                            });
+                        }
+                        // NOTIFY THE ADMINS OF THE PENDING EXPIRY
+                        bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " will lose their role of: **" +
+                            rName.name + "** in less than 5 days").catch((err) => {console.error(GetTimestamp()+err);});
+                        // UPDATE THE DB TO REMEMBER THAT THEY WERE NOTIFIED
+                        await query(`UPDATE temporary_roles SET notified=1 WHERE userID="${member.id}" AND temporaryRole="${rName.name}"`)
+                            .catch(err => {
+                                console.error(GetTimestamp()+`[InitDB] Failed to execute query 3: (${err})`);
+                                process.exit(-1);
+                            });
                         console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" + member.id +
-                            ") have lost their role: " + rName.name + "... time EXPIRED");
-                    }).catch(error => {
-                        console.error(error.message);
-                        bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not remove the " +
-                            rName.name + " role from " + member.user.username + "!**").catch(console.error);
-                    });
-                }
-                // CHECK IF THERE ARE ONLY HAVE 5 DAYS LEFT
-                if(daysLeft < 432000000 && notify == "0") {
-                    if(!member) {
-                        try {
-                            member.user.username = "<@" + rows[rowNumber].userID + ">";
-                            member.id = rows[rowNumber].userID;
-                        }
-                        catch (err) {
-                            console.error(GetTimestamp() + "Failed to find a user for ID: " + rows[rowNumber].userID + ". They may have left the server.");
-                            bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: " +
-                                rows[rowNumber].userID + ". They may have left the server.**").catch(console.error);
-                            continue;
-                        }
+                            ") has been notified that they will lose their role (" + rName.name + ") in less than 5 days");
                     }
-                    let endDateVal = new Date();
-                    endDateVal.setTime(dbTime);
-                    let finalDate = endDateVal.getFullYear() + "-" + (endDateVal.getMonth() + 1) + "-" + endDateVal.getDate() + " @" +
-                        endDateVal.getHours() + ":" + endDateVal.getMinutes() + ":" + endDateVal.getSeconds();
-                    // NOTIFY THE USER IN DM THAT THEY WILL EXPIRE
-                    if(config.paypal.enabled === "yes") {
-                        member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
-                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on " + finalDate +
-                            ". If you would like to keep the role, please send a payment to <" + config.paypal.url +
-                            ">. If you need help, please notify an admin. " +
-                            "You can use the `!help` command on the server for more information.").catch(error => {
-                            console.error(GetTimestamp() + "Failed to send a DM to user: " + member.id);
-                        });
-                    }
-                    else {
-                        member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
-                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on " + finalDate +
-                            ". If you would like to keep the role, please notify an admin. " +
-                            "You can use the `!help` command on the server for more information.").catch(error => {
-                            console.error(GetTimestamp() + "Failed to send a DM to user: " + member.id);
-                        });
-                    }
-                    // NOTIFY THE ADMINS OF THE PENDING EXPIRY
-                    bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " will lose their role of: **" +
-                        rName.name + "** in less than 5 days").catch(console.error);
-                    // UPDATE THE DB TO REMEMBER THAT THEY WERE NOTIFIED
-                    sql.run(`UPDATE temporary_roles SET notified=1 WHERE userID="${member.id}" AND temporaryRole="${rName.name}"`, (err) => {
-                        if(err) {
-                            console.error(err.message);
-                        }
-                    });
-                    console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" + member.id +
-                        ") has been notified that they will lose their role (" + rName.name + ") in less than 5 days");
                 }
             }
-        }
-    });
+        })
+        .catch(err => {
+            console.error(GetTimestamp()+`[InitDB] Failed to execute query 1: (${err})`);
+            process.exit(-1);
+        });
 }, 600000);
 // 86400000 = 1day
 // 3600000 = 1hr
@@ -134,7 +189,7 @@ setInterval(function() {
 // ##########################################################################
 // ############################## TEXT MESSAGE ##############################
 // ##########################################################################
-bot.on('message', message => {
+bot.on('message', async message => {
     // MAKE SURE ITS A COMMAND
     if(!message.content.startsWith(config.cmdPrefix)) {
         return
@@ -195,7 +250,7 @@ bot.on('message', message => {
                     message.delete({
                         timeout: 10000
                     });
-                }).catch(console.error);
+                }).catch((err) => {console.error(GetTimestamp()+err);});
                 return;
             }
         }
@@ -212,7 +267,7 @@ bot.on('message', message => {
             message.delete({
                 timeout: 10000
             });
-        }).catch(console.error);
+        }).catch((err) => {console.error(GetTimestamp()+err);});
         return;
     }
     // ######################### PAYPAL/SUBSCRIBE ########################
@@ -228,9 +283,7 @@ bot.on('message', message => {
                 'description': 'Thank you! \nYour support is greatly appreciated.'
             };
             message.delete();
-            m.send({
-                embed: embedMSG
-            }).catch(console.error);
+            m.send({ embed: embedMSG }).catch((err) => {console.error(GetTimestamp()+err);});
             return;
         }
     }
@@ -256,6 +309,7 @@ bot.on('message', message => {
                 let dateMultiplier = 86400000;
                 // ROLES WITH SPACES
                 let daRole = "";
+                let days = 0;
                 if(args[0] === "add") {
                     // Count args and the last is the days then 2-x are roles
                     for(var x = 2; x < args.length - 1; x++) {
@@ -278,15 +332,12 @@ bot.on('message', message => {
                 }
                 // CHECK DATABASE FOR ROLES
                 if(args[0] === "check") {
-                    sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`, (err, row) => {
-                        if(err) {
-                            console.error(err.message);
-                        }
-                        if(!row) {
-                            message.reply("⚠ [ERROR] " + mentioned.username + " is __NOT__ in the database for the role " + daRole);
-                            return;
-                        }
-                        else {
+                    await query(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
+                        .then(async row => {
+                            if(!row) {
+                                message.reply("⚠ [ERROR] " + mentioned.username + " is __NOT__ in the database for the role " + daRole);
+                                return;
+                            }
                             let startDateVal = new Date();
                             startDateVal.setTime(row.startDate);
                             let startDateTime = startDateVal.getFullYear() + "-" + (startDateVal.getMonth() + 1) + "-" +
@@ -296,57 +347,61 @@ bot.on('message', message => {
                             endDateVal.setTime(row.endDate);
                             let finalDate = endDateVal.getFullYear() + "-" + (endDateVal.getMonth() + 1) + "-" + endDateVal.getDate() +
                                 " @" + endDateVal.getHours() + ":" + endDateVal.getMinutes() + ":" + endDateVal.getSeconds();
-                            return c.send("✅ " + mentioned.username + " will lose the role: **" + row.temporaryRole +
+                            c.send("✅ " + mentioned.username + " will lose the role: **" + row.temporaryRole +
                                 "** on: `" + finalDate + "`! They were added on: `" + startDateTime + "`");
-                        }
-                    });
+                        })
+                        .catch(err => {
+                            console.error(GetTimestamp()+`[InitDB] Failed to execute query 9: (${err})`);
+                            process.exit(-1);
+                        });
                     return
                 }
                 // REMOVE MEMBER FROM DATABASE
                 else if(args[0] === "remove") {
                     mentioned = message.mentions.members.first();
-                    sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`, (err, row) => {
-                        if(err) {
-                            console.error(err.message);
-                        }
-                        if(!row) {
-                            return c.send("⚠ [ERROR] " + mentioned.displayName + " is __NOT__ in the database for the role " + daRole);
-                        }
-                        else {
-                            let theirRole = g.roles.cache.find(theirRole => theirRole.name === row.temporaryRole);
-                            mentioned.roles.remove(theirRole).catch(console.error);
-                            sql.run(`DELETE FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`, (err) => {
-                                if(err) {
-                                    console.error(err.message);
-                                }
-                                console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] " + m.displayName + " (" + m.id + ")" + " removed the \"" + daRole + "\" role from \"" + mentioned.displayName + "\" (" + mentioned.id + ")");
-                                c.send("⚠ " + mentioned.displayName + " has **lost** their role of: **" + theirRole.name + "** and has been removed from the database");
+                    await query(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
+                        .then(async row => {
+                            if(!row) {
+                                c.send("⚠ [ERROR] " + mentioned.displayName + " is __NOT__ in the database for the role " + daRole);
                                 return;
-                            });
-                        }
-                    });
-                    return
+                            }
+                            let theirRole = g.roles.cache.find(theirRole => theirRole.name === row.temporaryRole);
+                            mentioned.roles.remove(theirRole).catch((err) => {console.error(GetTimestamp()+err);});
+                            await query(`DELETE FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
+                                .then(async row => {
+                                    console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] " + m.displayName + " (" + m.id + ")" + " removed the \"" + daRole + "\" role from \"" + mentioned.displayName + "\" (" + mentioned.id + ")");
+                                    c.send("⚠ " + mentioned.displayName + " has **lost** their role of: **" + theirRole.name + "** and has been removed from the database");
+                                    return;
+                                })
+                                .catch(err => {
+                                    console.error(GetTimestamp()+`[InitDB] Failed to execute query 11: (${err})`);
+                                    process.exit(-1);
+                                });
+                        })
+                        .catch(err => {
+                            console.error(GetTimestamp()+`[InitDB] Failed to execute query 10: (${err})`);
+                            process.exit(-1);
+                        });
+                    return;
                 }
                 // ADD TIME TO A USER
                 else if(args[0] === "add") {
                     if(!daRole) {
-                        message.reply("what role do you want to add time to?");
+                        message.reply("What role do you want to add time to?");
                         return;
                     }
                     if(!parseInt(days)) {
-                        message.reply("Error: third value after the command has to be **X** number of days: `!tr add @" + mentioned.username + " Role 30`");
+                        message.reply("Error: The third value after the command has to be **X** number of days: `!tr add @" + mentioned.username + " Role 30`");
                         return;
                     }
                     else {
                         //mentioned=message.mentions.members.first();
-                        sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`, (err, row) => {
-                            if(err) {
-                                console.error(err.message);
-                            }
-                            if(!row) {
-                                return c.send("⚠ [ERROR] " + mentioned.username + " is __NOT__ in the database for the role " + daRole);
-                            }
-                            else {
+                        await query(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
+                            .then(async row => {
+                                if(!row) {
+                                    c.send("⚠ [ERROR] " + mentioned.username + " is __NOT__ in the database for the role " + daRole);
+                                    return;
+                                }
                                 let startDateVal = new Date();
                                 startDateVal.setTime(row.startDate);
                                 let startDateTime = startDateVal.getFullYear() + "-" + (startDateVal.getMonth() + 1) + "-" +
@@ -354,20 +409,24 @@ bot.on('message', message => {
                                     ":" + startDateVal.getSeconds();
                                 let endDateVal = new Date();
                                 let finalDate = (parseInt(row.endDate) + parseInt((days) * (dateMultiplier)));
-                                sql.run(`UPDATE temporary_roles SET endDate="${finalDate}", notified=0 WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`, (err) => {
-                                    if(err) {
-                                        console.error(err.message);
-                                    }
-                                    endDateVal.setTime(finalDate);
-                                    finalDate = endDateVal.getFullYear() + "-" + (endDateVal.getMonth() + 1) + "-" +
-                                        endDateVal.getDate() + " @" + endDateVal.getHours() + ":" + endDateVal.getMinutes() +
-                                        ":" + endDateVal.getSeconds();
-                                    console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.username + "\" (" + mentioned.id + ") was given " + days + " days by: " + m.displayName + " (" + m.id + ")");
-                                    c.send("✅ " + mentioned.username + " has had time added until: `" + finalDate + "`! They were added on: `" + startDateTime + "`");
-                                    return;
-                                });
-                            }
-                        });
+                                await query(`UPDATE temporary_roles SET endDate="${finalDate}", notified=0 WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
+                                    .then(async row => {
+                                        endDateVal.setTime(finalDate);
+                                        finalDate = endDateVal.getFullYear() + "-" + (endDateVal.getMonth() + 1) + "-" +
+                                            endDateVal.getDate() + " @" + endDateVal.getHours() + ":" + endDateVal.getMinutes() +
+                                            ":" + endDateVal.getSeconds();
+                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.username + "\" (" + mentioned.id + ") was given " + days + " days by: " + m.displayName + " (" + m.id + ")");
+                                        c.send("✅ " + mentioned.username + " has had time added until: `" + finalDate + "`! They were added on: `" + startDateTime + "`");
+                                    })
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 14: (${err})`);
+                                        process.exit(-1);
+                                    });
+                            })
+                            .catch(err => {
+                                console.error(GetTimestamp()+`[InitDB] Failed to execute query 13: (${err})`);
+                                process.exit(-1);
+                            });
                         return;
                     }
                 }
@@ -377,37 +436,45 @@ bot.on('message', message => {
                         return;
                     }
                     // ADD MEMBER TO DATASE, AND ADD THE ROLE TO MEMBER
-                    sql.get(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`, (err, row) => {
-                        if(err) {
-                            console.error(err.message);
-                        }
-                        mentioned = message.mentions.members.first();
-                        if(!row) {
-                            let curDate = new Date().getTime();
-                            let finalDateDisplay = new Date();
-                            let finalDate = ((args[1]) * (dateMultiplier));
-                            finalDate = ((curDate) + (finalDate));
-                            finalDateDisplay.setTime(finalDate);
-                            finalDateDisplay = finalDateDisplay.getFullYear() + "-" + (finalDateDisplay.getMonth() + 1) + "-" +
-                                finalDateDisplay.getDate() + " @" + finalDateDisplay.getHours() + ":" + finalDateDisplay.getMinutes() +
-                                ":" + finalDateDisplay.getSeconds();
-                            sql.run(`INSERT INTO temporary_roles (userID, temporaryRole, startDate, endDate, addedBy, notified) VALUES (?, ?, ?, ?, ?, 0)`,
-                                [mentioned.user.id, daRole, curDate, finalDate, m.id], (err) => {
-                                    if(err) {
-                                        console.error(err.message);
-                                    }
-                                });
-                            let theirRole = g.roles.cache.find(theirRole => theirRole.name === daRole);
-                            mentioned.roles.add(theirRole).catch(console.error);
-                            console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.user.username + "\" (" + mentioned.user.id + ") was given the \"" + daRole + "\" role by " + m.user.username + " (" + m.id + ")");
-                            c.send("🎉 " + mentioned.user.username + " has been given a **temporary** role of: **" + daRole + "**, enjoy! They will lose this role on: `" + finalDateDisplay + "`");
-                            return;
-                        }
-                        else {
-                            message.reply("this user already has the role **" + daRole + "** try using `!temprole remove @" + mentioned.displayName + "` if you want to change their role.");
-                            return;
-                        }
-                    });
+                    await query(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
+                        .then(async row => {
+                            mentioned = message.mentions.members.first();
+                            if(!row) {
+                                let curDate = new Date().getTime();
+                                let finalDateDisplay = new Date();
+                                let finalDate = ((args[1]) * (dateMultiplier));
+                                finalDate = ((curDate) + (finalDate));
+                                finalDateDisplay.setTime(finalDate);
+                                finalDateDisplay = finalDateDisplay.getFullYear() + "-" + (finalDateDisplay.getMonth() + 1) + "-" +
+                                    finalDateDisplay.getDate() + " @" + finalDateDisplay.getHours() + ":" + finalDateDisplay.getMinutes() +
+                                    ":" + finalDateDisplay.getSeconds();
+                                let values = mentioned.user.id+',\''
+                                            +daRole+'\','
+                                            +Math.round(curDate/1000)+','
+                                            +Math.round(finalDate/1000)+','
+                                            +m.id+', 0';
+                                await query(`INSERT INTO temporary_roles VALUES(${values});`)
+                                    .then(async result => {
+                                        let theirRole = g.roles.cache.find(theirRole => theirRole.name === daRole);
+                                        mentioned.roles.add(theirRole).catch((err) => {console.error(GetTimestamp()+err);});
+                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.user.username + "\" (" + 
+                                                    mentioned.user.id + ") was given the \"" + daRole + "\" role by " + m.user.username + " (" + m.id + ")");
+                                        c.send("🎉 " + mentioned.user.username + " has been given a **temporary** role of: **" + daRole + 
+                                               "**, enjoy! They will lose this role on: `" + finalDateDisplay + "`");
+                                    })
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 16: (${err})`);
+                                        process.exit(-1);
+                                    });
+                            }
+                            else {
+                                message.reply("This user already has the role **" + daRole + "** try using `!temprole remove @" + mentioned.displayName + "` if you want to reset their role.");
+                            }
+                        })
+                        .catch(err => {
+                            console.error(GetTimestamp()+`[InitDB] Failed to execute query 15: (${err})`);
+                            process.exit(-1);
+                        });
                 }
             }
         }
@@ -417,7 +484,7 @@ bot.on('message', message => {
                 message.delete({
                     timeout: 10000
                 });
-            }).catch(console.error);
+            }).catch((err) => {console.error(GetTimestamp()+err);});
             return;
         }
     }
@@ -448,7 +515,7 @@ bot.on('message', message => {
                 message.delete({
                     timeout: 10000
                 });
-            }).catch(console.error);
+            }).catch((err) => {console.error(GetTimestamp()+err);});
             return;
         }
     }
@@ -475,36 +542,39 @@ bot.on('message', message => {
             return;
         }
         // CHECK DATABASE FOR ROLES
-        sql.get(`SELECT * FROM temporary_roles WHERE userID="${m.id}" AND temporaryRole="${daRole}"`, (err, row) => {
-            if(err) {
-                console.error(err.message);
-            }
-            if(!row) {
-                message.delete();
-                m.send("⚠ [ERROR] " + m.displayName + " is __NOT__ in the database for the role " + daRole);
-                return;
-            }
-            else {
+        console.log(rName);
+        console.log(daRole);
+        console.log(m.id);
+        await query(`SELECT * FROM temporary_roles WHERE userID="${m.id}" AND temporaryRole="${daRole}"`)
+            .then(async row => {
+                if(!row) {
+                    message.delete();
+                    m.send("⚠ [ERROR] " + m.displayName + " is __NOT__ in the database for the role " + daRole);
+                    return;
+                }
+                console.log(row);
                 let startDateVal = new Date();
-                startDateVal.setTime(row.startDate);
+                startDateVal.setTime(row.startDate*1000);
                 let startDateTime = startDateVal.getFullYear() + "-" + (startDateVal.getMonth() + 1) + "-" + startDateVal.getDate() +
                     " @" + startDateVal.getHours() + ":" + startDateVal.getMinutes() + ":" + startDateVal.getSeconds();
                 let endDateVal = new Date();
-                endDateVal.setTime(row.endDate);
+                endDateVal.setTime(row.endDate*1000);
                 let finalDate = endDateVal.getFullYear() + "-" + (endDateVal.getMonth() + 1) + "-" + endDateVal.getDate() + " @" +
                     endDateVal.getHours() + ":" + endDateVal.getMinutes() + ":" + endDateVal.getSeconds();
                 message.delete();
                 m.send("✅ You will lose the role: **" + row.temporaryRole + "** on: `" + finalDate + "`! The role was added on: `" + startDateTime + "`");
-                return;
-            }
-        });
+            })
+            .catch(err => {
+                console.error(GetTimestamp()+`[InitDB] Failed to execute query 8: (${err})`);
+                process.exit(-1);
+            });
         return;
     }
     // ######################### MAP ###################################
     if(command === "map") {
         if(config.mapMain.enabled === "yes") {
             message.delete();
-            return m.send("Our official webmap: \n<" + config.mapMain.url + ">").catch(console.error);
+            return m.send("Our official webmap: \n<" + config.mapMain.url + ">").catch((err) => {console.error(GetTimestamp()+err);});
         }
     }
 });
@@ -525,14 +595,101 @@ function RestartBot(type) {
     return;
 }
 
-function CreateDB() {
+async function InitDB() {
     // CREATE DATABASE TABLE
-    sql.run(`CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT, notified TEXT)`, (err) => {
+    /*sql.run(`CREATE TABLE IF NOT EXISTS temporary_roles (userID TEXT, temporaryRole TEXT, startDate TEXT, endDate TEXT, addedBy TEXT, notified TEXT)`, (err) => {
         if(err) {
-            console.error(err.message);
+            console.error(GetTimestamp() + err.message);
         }
-    });
-    return;
+    });*/
+
+    // Create MySQL tabels
+    let currVersion = 1;
+    let dbVersion = 0;
+    await query(`CREATE TABLE IF NOT EXISTS metadata (
+                        \`key\` VARCHAR(50) PRIMARY KEY NOT NULL, 
+                        \`value\` VARCHAR(50) DEFAULT NULL);`)
+        .then(async x => {
+            await query(`SELECT \`value\` FROM metadata WHERE \`key\` = "DB_VERSION" LIMIT 1;`)
+                .then(async result => {
+                    //Save the DB version if one is returned
+                    if (result.length > 0) {
+                        dbVersion = parseInt(result[0].value);
+                    }
+                    console.log(GetTimestamp()+`[InitDB] DB version: ${dbVersion}, Latest: ${currVersion}`);
+                    if (dbVersion < currVersion) {
+                        for (dbVersion; dbVersion < currVersion; dbVersion++) {
+                            if (dbVersion == 0) {
+                                // Setup the temp roles table
+                                console.log(GetTimestamp()+'[InitDB] Creating the initial tables');
+                                await query(`CREATE TABLE IF NOT EXISTS temporary_roles (
+                                        userID bigint(19) unsigned NOT NULL, 
+                                        temporaryRole varchar(35) NOT NULL, 
+                                        startDate int(11) unsigned NOT NULL, 
+                                        endDate int(11) unsigned NOT NULL, 
+                                        addedBy bigint(19) unsigned NOT NULL, 
+                                        notified tinyint(1) unsigned DEFAULT 0)`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 4: (${err})`);
+                                        process.exit(-1);
+                                    });
+
+                                // Migrate the old sqlite entries into the table
+                                sql.all(`SELECT * FROM temporary_roles`, (err, rows) => {
+                                    if (err) {
+                                        console.error(GetTimestamp() + err.message);
+                                    }
+                                    else if (rows) {
+                                        for(rowNumber = 0; rowNumber < rows.length; rowNumber++) {
+                                            let values = rows[rowNumber].userID+',\''
+                                                        +rows[rowNumber].temporaryRole+'\','
+                                                        +Math.round(rows[rowNumber].startDate/1000)+','
+                                                        +Math.round(rows[rowNumber].endDate/1000)+','
+                                                        +rows[rowNumber].addedBy+','
+                                                        +rows[rowNumber].notified;
+                                            query(`INSERT INTO temporary_roles VALUES(${values});`)
+                                                .catch(err => {
+                                                    console.error(GetTimestamp()+`[InitDB] Failed to execute query 5: (${err})`);
+                                                    process.exit(-1);
+                                                });
+                                        }
+                                    }
+                                });
+                                await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 6: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                console.log(GetTimestamp()+'[InitDB] Migration #1 complete.');
+                            }
+                            else if (dbVersion == 1) {
+                                // Wait 30 seconds and let user know we are about to migrate the database and for them to make a backup until we handle backups and rollbacks.
+                                console.log(GetTimestamp()+'[InitDB] MIGRATION IS ABOUT TO START IN 30 SECONDS, PLEASE MAKE SURE YOU HAVE A BACKUP!!!');
+                                await wait(30 * 1000);
+
+                                // Setup the paypal orders table
+                                
+                                // Setup the paypal payments table
+                                await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 7: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                console.log(GetTimestamp()+'[InitDB] Migration #2 complete.');
+                            }
+                        }
+                        console.log(GetTimestamp()+'[InitDB] Migration process done.');
+                    }
+                })
+            .catch(err => {
+                console.error(GetTimestamp()+`[InitDB] Failed to get version info: (${err})`);
+                process.exit(-1);
+            });
+         })
+        .catch(err => {
+            console.error(GetTimestamp()+`[InitDB] Failed to create metadata table: (${err})`);
+            process.exit(-1);
+        });
 }
 
 async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999) {
@@ -637,6 +794,111 @@ function GetSnowFlake(seconds) {
     return toSnowflake(date);
 }
 
+async function handlePayPalData(req, res) {
+    let json = req.body;
+    if (!json) {
+        console.error(GetTimestamp()+'[handlePayPalData] Bad data');
+        return res.sendStatus(400);
+    }
+
+    let eventtype = json.event_type || '';
+    if (eventtype == 'CHECKOUT.ORDER.APPROVED') {
+        //Process the order and check PayPal if it exists to confirm someone isn't faking it
+        res.send('OK');
+        console.log(GetTimestamp()+'[handlePayPalData] Received webhook payload for:', eventtype);
+    }
+    else if (eventtype == 'PAYMENT.CAPTURE.COMPLETED') {
+        //Process the payment and check PayPal if it exists to confirm someone isn't faking it
+        res.send('OK');
+        console.log(GetTimestamp()+'[handlePayPalData] Received webhook payload for:', eventtype);
+    }
+    else if (eventtype != '') {
+        //Log and send msg if there's an event type that isn't supported
+        console.warn(GetTimestamp()+'[handlePayPalData] Received an unsupported event type:', JSON.stringify(json));
+        res.send('OK');
+        bot.channels.cache.get(config.mainChannelID).send(":exclamation: Received a PayPal webhook with an unsupported event type of: **" + eventtype + "**.").catch((err) => {console.error(GetTimestamp()+err);});
+    }
+    else {
+        //If there's no event type, it probably isn't from PayPal
+        console.error(GetTimestamp()+'[handlePayPalData] Received an unknown request:', JSON.stringify(json));
+        res.sendStatus(400);
+        bot.channels.cache.get(config.mainChannelID).send(":x: Received an **unknown** request in the PayPal handler.").catch((err) => {console.error(GetTimestamp()+err);});
+    }
+    //console.log(GetTimestamp()+'[handlePayPalData] Received webhook payload for:', JSON.stringify(json));
+    
+    //Will need to check the DB for orders and payments since they come on different webhooks and can be out of order
+    //Once both are confirmed, handle the role and add the time to the DB
+}
+
+function SQLConnect() {
+    return new Promise(function(resolve, reject) {
+        sqlConnection = mysql.createConnection({
+            host: config.db.host,
+            port: config.db.port,
+            user: config.db.username,
+            password: config.db.password,
+            database: config.db.database,
+            supportBigNumbers: true
+        });
+        sqlConnection.connect(function(err) {
+            if(err) {
+                //throw err;
+                //process.exit(1);
+                return reject;
+            }
+            console.log(GetTimestamp()+"Connected to SQL!");
+            resolve(true);
+        });
+    });
+}
+
+async function query(sql, args) {
+    return new Promise((resolve, reject) => {
+        sqlConnection.query(sql, args, (error, results, fields) => {
+            if (error) {
+                if(error.code==="PROTOCOL_CONNECTION_LOST" || error.code==="PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR") {
+                    console.log(GetTimestamp()+"Reconnecting to DB server...");
+                    SQLConnect().then( result => query(sql, args) );
+                }
+                else {
+                    return reject(error);
+                }
+            }
+            // Return results
+            return resolve(results);
+        });
+    });
+}
+
+function UpdateUsers() {/*
+    var guildsFetched = [];
+    for(var guild in config.guilds)
+    {
+        guildsFetched.push(bot.guilds.get(guild).fetchMembers());
+    }
+
+    sqlConnection.query("UPDATE users SET access_level=0 WHERE login_system = 'discord'", function(err, result) {
+        if(err)
+        {
+            if(err.code==="PROTOCOL_CONNECTION_LOST" || err.code==="PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR")
+            {
+                console.log(GetTimestamp()+"Reconnecting to DB server...");
+                SQLConnect().then(result => {
+                    UpdateUsers();
+                });
+            }
+        }
+        else if(!err)
+        {
+            console.log(GetTimestamp()+"SQL Query successful");
+            Promise.all(guildsFetched).then(fetched => {
+                CheckAllGuilds();
+                UpdateAllUsers();
+            });
+        }
+    });*/
+}
+
 // Run message clearing at midnight
 schedule.scheduleJob('0 0 * * *', () => {
     if(config.clearAtMidnight.length > 0) {
@@ -727,7 +989,7 @@ process
             return;
         }
         else {
-            console.error(err, GetTimestamp() + 'Uncaught Exception thrown');
+            console.error(GetTimestamp() + err, GetTimestamp() + 'Uncaught Exception thrown');
             process.exit(1);
         }
     });
