@@ -2,6 +2,8 @@
 //Post to the channel when an order/payment is received, how much, and for whom
 //Package the donation.php?
 //Add onGuildMember events from authBot?
+//Add username to the temp role table
+//Date string to have 0's
 const Discord = require('discord.js');
 const bot = new Discord.Client();
 const config = require('./config.json');
@@ -375,7 +377,7 @@ bot.on('message', async message => {
                         message.reply("What role do you want to add time to?");
                         return;
                     }
-                    if(!parseInt(days)) {
+                    if(!Number(days)) {
                         message.reply("Error: The third value after the command has to be **X** number of days: `!tr add @" + mentioned.username + " Role 30`");
                         return;
                     }
@@ -390,7 +392,7 @@ bot.on('message', async message => {
                             let startDateTime = startDateVal.getFullYear() + "-" + (startDateVal.getMonth() + 1) + "-" +
                                 startDateVal.getDate() + " @" + startDateVal.getHours() + ":" + startDateVal.getMinutes() +
                                 ":" + startDateVal.getSeconds();
-                            let finalDate = parseInt(row[0].endDate * 1000) + parseInt(days * dateMultiplier);
+                            let finalDate = Number(row[0].endDate * 1000) + Number(days * dateMultiplier);
                             await query(`UPDATE temporary_roles SET endDate="${Math.round(finalDate / 1000)}", notified=0 WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
                                 .then(async result => {
                                     let endDateVal = new Date();
@@ -413,8 +415,8 @@ bot.on('message', async message => {
                     return;
                 }
                 else {
-                    if(!parseInt(args[1])) {
-                        message.reply("Error: Second value after the command has to be **X** number of days, IE:\n`!" + command + " @" + mentioned.user.username + " 90 Role`");
+                    if(!Number(args[1])) {
+                        message.reply("Error: Second value after the command has to be **X** number of days, IE:\n`!" + command + " @" + mentioned.username + " 90 Role`");
                         return;
                     }
                     // ADD MEMBER TO DATASE, AND ADD THE ROLE TO MEMBER
@@ -424,8 +426,7 @@ bot.on('message', async message => {
                             if(!row[0]) {
                                 let curDate = new Date().getTime();
                                 let finalDateDisplay = new Date();
-                                let finalDate = ((args[1]) * (dateMultiplier));
-                                finalDate = ((curDate) + (finalDate));
+                                let finalDate = curDate + (Number(args[1]) * dateMultiplier);
                                 finalDateDisplay.setTime(finalDate);
                                 finalDateDisplay = finalDateDisplay.getFullYear() + "-" + (finalDateDisplay.getMonth() + 1) + "-" +
                                     finalDateDisplay.getDate() + " @" + finalDateDisplay.getHours() + ":" + finalDateDisplay.getMinutes() +
