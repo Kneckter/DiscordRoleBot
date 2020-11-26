@@ -1,6 +1,7 @@
 # DiscordRoleBot
 
-DiscordRoleBot uses JavaScript for automated management of temporary roles on a discord server. Now supporting multiple temp roles per user.
+DiscordRoleBot uses JavaScript for automated management of temporary roles on a discord server with the ability to support multiple temp roles per user.
+This bot can also handle PayPal webhooks to receive notice of donations and assign a temp role based on the received information.
 It also provides the ability to mass delete messages (even over the 2 week limit) from channels within a time range. 
 There are also options for scheduling auto delete for different channels.
 
@@ -34,6 +35,11 @@ There are also options for scheduling auto delete for different channels.
    * The mainChannelID could be a channel that only admin/mod/owner have access to. It reports expired roles. 
      * You can also use this channel to @usernames without them getting notified because people cannot see tags to channels they cannot access.
 
+10. Create a blank database in MariaDB or MySQL for the bot to use.
+   * Log into mysql	by running a command like `mysql -u root -p`
+   * Create the blank DB with `CREATE DATABASE discord_role_bot;`
+   * Grant access to the DB account with `GRANT ALL PRIVILEGES ON discord_role_bot.* TO 'username'@'localhost';`
+
 <hr />
 
 # LAUNCHING IT:
@@ -62,3 +68,11 @@ The bot will automatically check for expired roles every 10 minutes after startu
 If it finds an expired role, it will remove it and notify the admins. 
 If it finds a role that will expire in less than 5 days, it will notify the user through DM and the admins in their channel.
 If it cannot find a user in the server that matches the ID in the database, it will notify the admins.
+
+# DONATIONS
+
+The donations settings for processing PayPal webhooks is still a WIP.
+
+# LEGACY DATA:
+
+This bot moved from SQLite to MySQL at version 1.0.3. If you have temp role data in a SQLite file, the bot will migrate that data to the new DB during its initial setup.
