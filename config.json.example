@@ -19,7 +19,10 @@
     "donations": {
         "enabled": "no",
         "server": "127.0.0.1",
-        "port": "9500"
+        "port": "9500",
+        "client_ID": "Client ID from PayPal",
+        "client_secret": "Client Secret from PayPal",
+        "merchant_id": "Merchant from PayPal"
     },
     "db": {
         "host": "127.0.0.1",

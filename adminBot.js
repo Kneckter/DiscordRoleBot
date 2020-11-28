@@ -12,7 +12,9 @@ const app = express();
 const sqlite3 = require('sqlite3');
 const sql = new sqlite3.Database('./dataBase.sqlite');
 const mysql = require('mysql');
+const request = require('request');
 const wait = async ms => new Promise(done => setTimeout(done, ms));
+const dateMultiplier = 86400000;
 
 // log our bot in
 bot.login(config.token);
@@ -31,7 +33,7 @@ bot.on('ready', () => {
         app.use(helmet());
 
         // Body parsing middleware
-        app.use(express.json({ limit: '5kb' }));
+        app.use(express.json({ limit: '10kb' }));
 
         // Parsing routes
         app.get('/', (req, res) => res.send('Listening...'));
@@ -47,7 +49,7 @@ bot.on('ready', () => {
             else {
                 var clientip = 'unknown'
             }
-            console.log(GetTimestamp()+'[Webhook Test] Someone stopped by from: ', clientip);
+            console.log(GetTimestamp()+'[PayPalGet] Someone stopped by from: ', clientip);
             res.send('Listening...');
         });
         app.post('/paypal', async (req, res) => {
@@ -57,7 +59,7 @@ bot.on('ready', () => {
             else {
                 var clientip = 'unknown'
             }
-            console.log(GetTimestamp()+'[handlePayPalData] Incoming POST from: ', clientip);
+            console.log(GetTimestamp()+'[PayPalPost] Incoming POST from: ', clientip);
             await handlePayPalData(req, res);
         });
         app.listen(config.donations.port, config.donations.server, () => console.log(GetTimestamp()+`Listening on ${config.donations.server}:${config.donations.port}...`));
@@ -69,6 +71,39 @@ bot.on('ready', () => {
 // ##########################################################################
 // DATABASE TIMER FOR TEMPORARY ROLES
 setInterval(async function() {
+    // Process any outstanding donations before checking roles
+    await query(`SELECT * FROM paypal_info WHERE fulfilled=0`)
+        .then(async rows => {
+            if(!rows[0]) {
+                return;
+            }
+
+            // Get a bearer token so we can pull some data from PayPal
+            let bearerToken = await getBearerToken();
+            if (!bearerToken) {
+                return;
+            }
+
+            for(rowNumber = "0"; rowNumber < rows.length; rowNumber++) {
+                // Get the JSON and pull out the href to download the order info
+                let orderID = rows[rowNumber].order_id;
+
+                // Get the order details directly from PayPal so it is up-to-date
+                let orderJSON = await getJSONData(bearerToken, `https://api.sandbox.paypal.com/v2/checkout/orders/${orderID}`);
+                if (!orderJSON) {
+                    continue;
+                }
+
+                // Save some variables and write to the table
+                processPayPalOrder(orderJSON, "RECHECK");
+            }
+        })
+        .catch(err => {
+            console.error(GetTimestamp()+`[InitDB] Failed to execute late payment query 1: (${err})`);
+            process.exit(-1);
+        });
+
+    // Check everyone for expired time
     let timeNow = new Date().getTime();
     let dbTime = 0;
     let daysLeft = 0;
@@ -104,8 +139,7 @@ setInterval(async function() {
                     let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
                     await query(`UPDATE temporary_roles SET username="${name}" WHERE userID="${member.id}"`)
                         .catch(err => {
-                            console.error(GetTimestamp()+`[InitDB] Failed to execute query 1a: (${err})`);
-                            process.exit(-1);
+                            console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 4: (${err})`);
                         });
                     console.log(GetTimestamp() + "Updated the username for "+member.id+" to "+name);
                 }
@@ -118,7 +152,7 @@ setInterval(async function() {
                         // REMOVE DATABASE ENTRY
                         await query(`DELETE FROM temporary_roles WHERE userID='${member.id}' AND temporaryRole='${rName.name}'`)
                             .catch(err => {
-                                console.error(GetTimestamp()+`[InitDB] Failed to execute query 2: (${err})`);
+                                console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 2: (${err})`);
                                 process.exit(-1);
                             });
                         console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" + member.id +
@@ -158,7 +192,7 @@ setInterval(async function() {
                     // UPDATE THE DB TO REMEMBER THAT THEY WERE NOTIFIED
                     await query(`UPDATE temporary_roles SET notified=1, username="${member.user.username}" WHERE userID="${member.id}" AND temporaryRole="${rName.name}"`)
                         .catch(err => {
-                            console.error(GetTimestamp()+`[InitDB] Failed to execute query 3: (${err})`);
+                            console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 3: (${err})`);
                             process.exit(-1);
                         });
                     console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" + member.id +
@@ -167,7 +201,7 @@ setInterval(async function() {
             }
         })
         .catch(err => {
-            console.error(GetTimestamp()+`[InitDB] Failed to execute query 1: (${err})`);
+            console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 1: (${err})`);
             process.exit(-1);
         });
 }, 600000);
@@ -204,7 +238,6 @@ bot.on('message', async message => {
     command = command.slice(config.cmdPrefix.length);
     // GET ARGUMENTS
     let args = msg.split(" ").slice(1);
-    skip = "no";
     // GET ROLES FROM CONFIG
     let AdminR = g.roles.cache.find(role => role.name === config.adminRoleName);
     if(!AdminR) {
@@ -295,7 +328,6 @@ bot.on('message', async message => {
                 return;
             }
             else {
-                let dateMultiplier = 86400000;
                 // ROLES WITH SPACES
                 let daRole = "";
                 let days = 0;
@@ -338,7 +370,7 @@ bot.on('message', async message => {
                         })
                         .catch(err => {
                             console.error(GetTimestamp()+`[InitDB] Failed to execute query 9: (${err})`);
-                            process.exit(-1);
+                            return;
                         });
                     return;
                 }
@@ -360,12 +392,12 @@ bot.on('message', async message => {
                                 })
                                 .catch(err => {
                                     console.error(GetTimestamp()+`[InitDB] Failed to execute query 11: (${err})`);
-                                    process.exit(-1);
+                                    return;
                                 });
                         })
                         .catch(err => {
                             console.error(GetTimestamp()+`[InitDB] Failed to execute query 10: (${err})`);
-                            process.exit(-1);
+                            return;
                         });
                     return;
                 }
@@ -399,12 +431,12 @@ bot.on('message', async message => {
                                 })
                                 .catch(err => {
                                     console.error(GetTimestamp()+`[InitDB] Failed to execute query 14: (${err})`);
-                                    process.exit(-1);
+                                    return;
                                 });
                         })
                         .catch(err => {
                             console.error(GetTimestamp()+`[InitDB] Failed to execute query 13: (${err})`);
-                            process.exit(-1);
+                            return;
                         });
                     return;
                 }
@@ -428,20 +460,20 @@ bot.on('message', async message => {
                                             +Math.round(curDate/1000)+','
                                             +Math.round(finalDate/1000)+','
                                             +m.id
-                                            +', 0'+','
-                                            +mentioned.user.username;
+                                            +', 0'+',\''
+                                            +mentioned.user.username+'\'';
                                 await query(`INSERT INTO temporary_roles VALUES(${values});`)
                                     .then(async result => {
                                         let theirRole = g.roles.cache.find(theirRole => theirRole.name === daRole);
                                         mentioned.roles.add(theirRole).catch(err => {console.error(GetTimestamp()+err);});
-                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.user.username + "\" (" + 
+                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.user.username + "\" (" +
                                                     mentioned.user.id + ") was given the \"" + daRole + "\" role by " + m.user.username + " (" + m.id + ")");
-                                        c.send("🎉 " + mentioned.user.username + " has been given a **temporary** role of: **" + daRole + 
+                                        c.send("🎉 " + mentioned.user.username + " has been given a **temporary** role of: **" + daRole +
                                                "**, enjoy! They will lose this role on: `" + finalDateDisplay + "`");
                                     })
                                     .catch(err => {
                                         console.error(GetTimestamp()+`[InitDB] Failed to execute query 16: (${err})`);
-                                        process.exit(-1);
+                                        return;
                                     });
                             }
                             else {
@@ -450,7 +482,7 @@ bot.on('message', async message => {
                         })
                         .catch(err => {
                             console.error(GetTimestamp()+`[InitDB] Failed to execute query 15: (${err})`);
-                            process.exit(-1);
+                            return;
                         });
                 }
             }
@@ -537,7 +569,7 @@ bot.on('message', async message => {
             })
             .catch(err => {
                 console.error(GetTimestamp()+`[InitDB] Failed to execute query 8: (${err})`);
-                process.exit(-1);
+                return;
             });
         return;
     }
@@ -568,10 +600,10 @@ function RestartBot(type) {
 
 async function InitDB() {
     // Create MySQL tabels
-    let currVersion = 2;
+    let currVersion = 3;
     let dbVersion = 0;
     await query(`CREATE TABLE IF NOT EXISTS metadata (
-                        \`key\` VARCHAR(50) PRIMARY KEY NOT NULL, 
+                        \`key\` VARCHAR(50) PRIMARY KEY NOT NULL,
                         \`value\` VARCHAR(50) DEFAULT NULL);`)
         .then(async x => {
             await query(`SELECT \`value\` FROM metadata WHERE \`key\` = "DB_VERSION" LIMIT 1;`)
@@ -587,14 +619,14 @@ async function InitDB() {
                                 // Setup the temp roles table
                                 console.log(GetTimestamp()+'[InitDB] Creating the initial tables');
                                 await query(`CREATE TABLE IF NOT EXISTS temporary_roles (
-                                        userID bigint(19) unsigned NOT NULL, 
-                                        temporaryRole varchar(35) NOT NULL, 
-                                        startDate int(11) unsigned NOT NULL, 
-                                        endDate int(11) unsigned NOT NULL, 
-                                        addedBy bigint(19) unsigned NOT NULL, 
+                                        userID bigint(19) unsigned NOT NULL,
+                                        temporaryRole varchar(35) NOT NULL,
+                                        startDate int(11) unsigned NOT NULL,
+                                        endDate int(11) unsigned NOT NULL,
+                                        addedBy bigint(19) unsigned NOT NULL,
                                         notified tinyint(1) unsigned DEFAULT 0)`)
                                     .catch(err => {
-                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 4: (${err})`);
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}b: (${err})`);
                                         process.exit(-1);
                                     });
 
@@ -613,7 +645,7 @@ async function InitDB() {
                                                         +rows[rowNumber].notified;
                                             query(`INSERT INTO temporary_roles VALUES(${values});`)
                                                 .catch(err => {
-                                                    console.error(GetTimestamp()+`[InitDB] Failed to execute query 5: (${err})`);
+                                                    console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}c: (${err})`);
                                                     process.exit(-1);
                                                 });
                                         }
@@ -621,7 +653,7 @@ async function InitDB() {
                                 });
                                 await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
                                     .catch(err => {
-                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 6: (${err})`);
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}a: (${err})`);
                                         process.exit(-1);
                                     });
                                 console.log(GetTimestamp()+'[InitDB] Migration #1 complete.');
@@ -633,25 +665,62 @@ async function InitDB() {
                                 await query(`ALTER TABLE temporary_roles
                                             ADD COLUMN username varchar(35) DEFAULT NULL;`)
                                     .catch(err => {
-                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 7a1: (${err})`);
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}b: (${err})`);
                                         process.exit(-1);
                                     });
                                 await query(`ALTER TABLE \`temporary_roles\` COLLATE='utf8mb4_general_ci', CONVERT TO CHARSET utf8mb4;`)
                                     .catch(err => {
-                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 7a2: (${err})`);
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}c: (${err})`);
                                         process.exit(-1);
                                     });
                                 await query(`ALTER TABLE \`metadata\` COLLATE='utf8mb4_general_ci', CONVERT TO CHARSET utf8mb4;`)
                                     .catch(err => {
-                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 7a3: (${err})`);
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}d: (${err})`);
                                         process.exit(-1);
                                     });
                                 await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
                                     .catch(err => {
-                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 7a4: (${err})`);
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}a: (${err})`);
                                         process.exit(-1);
                                     });
                                 console.log(GetTimestamp()+'[InitDB] Migration #2 complete.');
+                            }
+                            else if (dbVersion == 2) {
+                                // Wait 30 seconds and let user know we are about to migrate the database and for them to make a backup until we handle backups and rollbacks.
+                                console.log(GetTimestamp()+'[InitDB] MIGRATION IS ABOUT TO START IN 30 SECONDS, PLEASE MAKE SURE YOU HAVE A BACKUP!!!');
+                                await wait(30 * 1000);
+                                await query(`CREATE TABLE IF NOT EXISTS paypal_info (
+                                        invoice varchar(32) NOT NULL,
+                                        userID bigint(19) unsigned NOT NULL,
+                                        orderDate int(11) unsigned NOT NULL,
+                                        temporaryRole varchar(35) DEFAULT NULL,
+                                        days tinyint(3) unsigned DEFAULT NULL,
+                                        order_id varchar(20) NOT NULL,
+                                        order_json longtext DEFAULT NULL,
+                                        order_verified tinyint(1) unsigned NOT NULL DEFAULT 0,
+                                        payment_verified tinyint(1) unsigned NOT NULL DEFAULT 0,
+                                        fulfilled tinyint(1) unsigned NOT NULL DEFAULT 0,
+                                        PRIMARY KEY (\`invoice\`))`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}b: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                await query(`ALTER TABLE \`temporary_roles\` ADD PRIMARY KEY (\`userID\`, \`temporaryRole\`);`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}c: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                await query(`ALTER TABLE \`metadata\` COLLATE='utf8mb4_general_ci', CONVERT TO CHARSET utf8mb4;`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}d: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}a: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                console.log(GetTimestamp()+'[InitDB] Migration #3 complete.');
                             }
                         }
                         console.log(GetTimestamp()+'[InitDB] Migration process done.');
@@ -757,37 +826,337 @@ function GetSnowFlake(seconds) {
 async function handlePayPalData(req, res) {
     let json = req.body;
     if (!json) {
+        res.sendStatus(400);
         console.error(GetTimestamp()+'[handlePayPalData] Bad data');
-        return res.sendStatus(400);
+        bot.channels.cache.get(config.mainChannelID).send(":x: Received an **bad** request in the PayPal handler. It had no data in the body.").catch(err => {console.error(GetTimestamp()+err);});
+        return;
     }
 
     let eventtype = json.event_type || '';
     if (eventtype == 'CHECKOUT.ORDER.APPROVED') {
-        //Process the order and check PayPal if it exists to confirm someone isn't faking it
+        // Process the order and check PayPal if it exists to confirm someone isn't faking it
         res.send('OK');
         console.log(GetTimestamp()+'[handlePayPalData] Received webhook payload for:', eventtype);
+
+        // Get a bearer token so we can pull some data from PayPal
+        let bearerToken = await getBearerToken();
+        if (!bearerToken) {
+            return;
+        }
+
+        // Get the order details directly from PayPal in case someone fakes a POST message to this bot
+        let orderJSON = await getJSONData(bearerToken, `https://api.sandbox.paypal.com/v2/checkout/orders/${json.resource.id}`);
+        if (!orderJSON) {
+            return;
+        }
+
+        // Save some variables and write to the table
+        processPayPalOrder(orderJSON, "ORDER");
     }
     else if (eventtype == 'PAYMENT.CAPTURE.COMPLETED') {
         //Process the donation and check PayPal if it exists to confirm someone isn't faking it
         res.send('OK');
         console.log(GetTimestamp()+'[handlePayPalData] Received webhook payload for:', eventtype);
+
+        // Get a bearer token so we can pull some data from PayPal
+        let bearerToken = await getBearerToken();
+        if (!bearerToken) {
+            return;
+        }
+
+        // Get the payment details from PayPal
+        let payJSON = await getJSONData(bearerToken, `https://api.sandbox.paypal.com/v2/payments/captures/${json.resource.id}`);
+        if (!payJSON) {
+            return;
+        }
+
+        // Get the order link so we can process the data
+        let links = payJSON.links;
+        let link = "";
+        for (i=0; i<links.length; i++) {
+            if (links[i].href.includes("orders")) {
+                link = links[i].href;
+                break;
+            }
+        }
+        // Get the order details from PayPal
+        let orderJSON = await getJSONData(bearerToken, `${link}`);
+        if (!orderJSON) {
+            return;
+        }
+
+        // Save some variables and write to the table
+        processPayPalOrder(orderJSON, "PAYMENT");
     }
     else if (eventtype != '') {
         //Log and send msg if there's an event type that isn't supported
-        console.warn(GetTimestamp()+'[handlePayPalData] Received an unsupported event type:', JSON.stringify(json));
         res.send('OK');
-        bot.channels.cache.get(config.mainChannelID).send(":exclamation: Received a PayPal webhook with an unsupported event type of: **" + eventtype + "**.").catch(err => {console.error(GetTimestamp()+err);});
+        console.warn(GetTimestamp()+'[handlePayPalData] Received an unsupported event type:', JSON.stringify(json));
+        bot.channels.cache.get(config.mainChannelID).send(":exclamation: Received a PayPal webhook with an unsupported event type of: **" + eventtype + "**. See the console log for details.")
+           .catch(err => {console.error(GetTimestamp()+err);});
     }
     else {
         //If there's no event type, it probably isn't from PayPal
-        console.error(GetTimestamp()+'[handlePayPalData] Received an unknown request:', JSON.stringify(json));
         res.sendStatus(400);
-        bot.channels.cache.get(config.mainChannelID).send(":x: Received an **unknown** request in the PayPal handler.").catch(err => {console.error(GetTimestamp()+err);});
+        console.error(GetTimestamp()+'[handlePayPalData] Received an unknown request:', JSON.stringify(json));
+        bot.channels.cache.get(config.mainChannelID).send(":x: Received an **unknown** request in the PayPal handler. See the console log for details.")
+           .catch(err => {console.error(GetTimestamp()+err);});
     }
     //console.log(GetTimestamp()+'[handlePayPalData] Received webhook payload for:', JSON.stringify(json));
-    
-    //Will need to check the DB for orders and payments since they come on different webhooks and can be out of order
-    //Once both are confirmed, handle the role and add the time to the DB
+}
+
+async function getBearerToken() {
+    return new Promise((resolve, reject) => {
+        // Get a bearer token so we can pull some data from PayPal
+        request.post({
+            uri: "https://api.sandbox.paypal.com/v1/oauth2/token",
+            headers: {
+                "Accept": "application/json",
+                "Accept-Language": "en_US",
+                "content-type": "application/x-www-form-urlencoded"
+            },
+            auth: {
+                'user': config.donations.client_ID,
+                'pass': config.donations.client_secret
+            },
+            form: {
+                "grant_type": "client_credentials"
+            }
+        }, async function(err, response, body) {
+            if(err) {
+                console.error(GetTimestamp() + "Failed to send bearer token request");
+                bot.channels.cache.get(config.mainChannelID).send(":x: Failed to send bearer token request.").catch(err => {console.error(GetTimestamp()+err);});
+                return reject(err);
+            }
+            let bearerJSON = JSON.parse(body);
+            return resolve(bearerJSON.access_token);
+        })
+    });
+}
+
+async function getJSONData(bearerToken, uri) {
+    return new Promise((resolve, reject) => {
+        // Get the URI details directly from PayPal in case someone fakes a POST message to this bot
+        request.get({
+            uri: `${uri}`,
+            headers: {
+                "Accept": "application/json",
+                "Accept-Language": "en_US",
+                "Authorization": `Bearer ${bearerToken}`
+            }
+        }, async function(err, response, body) {
+            if(err) {
+                console.error(GetTimestamp() + "Failed to get order request");
+                bot.channels.cache.get(config.mainChannelID).send(":x: Failed to get order request.").catch(err => {console.error(GetTimestamp()+err);});
+                return reject(err);
+            }
+            // Save some variables and write to the table
+            return resolve(JSON.parse(body));
+        })
+    });
+}
+
+async function processPayPalOrder(orderJSON, source) {
+    // Save some variables and write to the table
+    let invoice = orderJSON.purchase_units[0].invoice_id;
+    if (invoice.length != 29) {
+        console.error(GetTimestamp()+"Invalid invoice length for invoice: "+invoice);
+        bot.channels.cache.get(config.mainChannelID).send(":x: Invalid invoice length for invoice: "+invoice).catch(err => {console.error(GetTimestamp()+err);});
+        return;
+    }
+    let merchant_id = orderJSON.purchase_units[0].payee.merchant_id;
+    if (merchant_id != config.donations.merchant_id) {
+        console.error(GetTimestamp()+"The order's merchant ID does not match the one in the config file. Merchant ID: "+merchant_id);
+        bot.channels.cache.get(config.mainChannelID).send(":x: The order's merchant ID does not match the one in the config file. Merchant ID: "+merchant_id)
+           .catch(err => {console.error(GetTimestamp()+err);});
+        return;
+    }
+    let order_id = orderJSON.id;
+    let username = orderJSON.purchase_units[0].custom_id;
+    let userID = invoice.split("-")[0];
+    let orderDate = invoice.split("-")[1];
+    let tempRole = orderJSON.purchase_units[0].items[0].name;
+    let days = orderJSON.purchase_units[0].items[0].description;
+    let grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
+    let netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
+    let paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
+
+    let member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
+    // Check if we pulled the member's information correctly or if they left the server.
+    if(!member) {
+        try {
+            member.user.username = "<@" + userID + ">";
+            member.id = userID;
+        }
+        catch (err) {
+            console.error(GetTimestamp() + "Failed to find a user for ID: " + userID + ". They may have left the server.");
+            bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
+                userID + ". They may have left the server.**").catch(err => {console.error(GetTimestamp()+err);});
+            return;
+        }
+    }
+
+    // Check if the invoice is already in the DB and fulfilled
+    await query(`SELECT * FROM paypal_info WHERE invoice = "${invoice}" LIMIT 1;`)
+        .then(async rows => {
+            if (rows[0] && rows[0].fulfilled) {
+                console.log(GetTimestamp()+"This donation has already been fulfilled for invoice: "+invoice);
+                return;
+            }
+            // Write to the DB if there isn't a row and if there is but unfulfilled
+            let sql_query = ``;
+            if (paymentStatus == "COMPLETED") {
+                // Set the payment verification to true if the order already shows the payment as complete. This is true for instant payments
+                sql_query = `INSERT INTO paypal_info (invoice, userID, orderDate, temporaryRole, days, order_verified, order_json, order_id, payment_verified)
+                        VALUES("${invoice}", ${userID}, ${orderDate}, "${tempRole}", ${days}, 1, '''${JSON.stringify(orderJSON)}''', "${order_id}", 1)
+                        ON DUPLICATE KEY UPDATE
+                            userID=${userID},
+                            orderDate=${orderDate},
+                            temporaryRole="${tempRole}",
+                            days=${days},
+                            order_verified=1,
+                            order_json='''${JSON.stringify(orderJSON)}''',
+                            order_id="${order_id}",
+                            payment_verified=1;`
+            }
+            else {
+                sql_query = `INSERT INTO paypal_info (invoice, userID, orderDate, temporaryRole, days, order_verified, order_json)
+                        VALUES("${invoice}", ${userID}, ${orderDate}, "${tempRole}", ${days}, 1, '''${JSON.stringify(orderJSON)}''', ${order_id})
+                        ON DUPLICATE KEY UPDATE
+                            userID=${userID},
+                            orderDate=${orderDate},
+                            temporaryRole="${tempRole}",
+                            days=${days},
+                            order_verified=1,
+                            order_json='''${JSON.stringify(orderJSON)}''',
+                            order_id=${order_id};`
+            }
+            await query(sql_query)
+                .then(async results => {
+                    // If the order has a payment status of complete, assign the time. else, drop out to wait for the payment webhook
+                    if (paymentStatus == "COMPLETED") {
+                        // Check if the person already has the requested role
+                        await query(`SELECT * FROM temporary_roles WHERE userID = "${userID}" AND temporaryRole = "${tempRole}" LIMIT 1;`)
+                            .then(async row => {
+                                if (row[0]) {
+                                    // They have the role so add time to their account. Update the info to the temp_role table
+                                    let startDateVal = new Date();
+                                    startDateVal.setTime(row[0].startDate * 1000);
+                                    let startDateTime = await formatTimeString(startDateVal);
+                                    let finalDate = Number(row[0].endDate * 1000) + Number(days * dateMultiplier);
+                                    await query(`UPDATE temporary_roles SET endDate="${Math.round(finalDate / 1000)}", notified=0, username="${username}" WHERE userID="${userID}" AND temporaryRole="${tempRole}"`)
+                                        .then(async result => {
+                                            let endDateVal = new Date();
+                                            endDateVal.setTime(finalDate);
+                                            finalDate = await formatTimeString(endDateVal);
+                                            console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + username + "\" (" + userID + ") was given " + days + " days by: PayPal donation (" + invoice + ")");
+                                            // Update the fulfilled column if both of the above are successful
+                                            await query(`UPDATE paypal_info SET fulfilled=1 WHERE invoice="${invoice}"`)
+                                                .then(async result => {
+                                                    if (source == "RECHECK") {
+                                                        bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for addition time on the **"+tempRole+"** role was processed for "+username+
+                                                                                                          ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). Time was added until: \`"+
+                                                                                                          finalDate+"\`! They were added on: \`"+startDateTime+"\`.");
+                                                    }
+                                                    else {
+                                                        bot.channels.cache.get(config.mainChannelID).send("✅ PayPal donation for addition time on the **"+tempRole+"** role was processed for "+username+
+                                                                                                          ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). Time was added until: \`"+
+                                                                                                          finalDate+"\`! They were added on: \`"+startDateTime+"\`.");
+                                                    }
+                                                    // Messaage the user too, so they know when it has been processed.
+                                                    member.send("Hello " + member.user.username + "! Thank you for your donation! Your role of **" + tempRole + "** on " +
+                                                        bot.guilds.cache.get(config.serverID).name + " has been assigned until \`" + finalDate + "\`.")
+                                                    .catch(error => {
+                                                        console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
+                                                    });
+                                                })
+                                                .catch(err => {
+                                                    console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 5: (${err})`);
+                                                    bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 5: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                                                    return;
+                                                });
+                                        })
+                                        .catch(err => {
+                                            console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 4: (${err})`);
+                                            bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 4: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                                            return;
+                                        });
+                                    return;
+                                }
+                                let curDate = new Date().getTime();
+                                let finalDate = curDate + (Number(days) * dateMultiplier);
+                                let values = member.user.id+',\''
+                                            +tempRole+'\','
+                                            +Math.round(curDate/1000)+','
+                                            +Math.round(finalDate/1000)+','
+                                            +config.ownerID
+                                            +', 0'+',\''
+                                            +member.user.username+'\'';
+                                await query(`INSERT INTO temporary_roles VALUES(${values});`)
+                                    .then(async result => {
+                                        let finalDateDisplay = new Date();
+                                        finalDateDisplay.setTime(finalDate);
+                                        finalDateDisplay = await formatTimeString(finalDateDisplay);
+                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" +
+                                                    member.user.id + ") was given the \"" + tempRole + "\" role by : PayPal donation (" + invoice + ")");
+                                        // Update the fulfilled column if both of the above are successful
+                                        await query(`UPDATE paypal_info SET fulfilled=1 WHERE invoice="${invoice}"`)
+                                            .then(async result => {
+                                                // Assign the role to the user and send messages
+                                                let theirRole = bot.guilds.cache.get(config.serverID).roles.cache.find(theirRole => theirRole.name === tempRole);
+                                                member.roles.add(theirRole).catch(err => {console.error(GetTimestamp()+err);});
+                                                member.send("Hello " + member.user.username + "! Thank you for your donation! Your role of **" + tempRole + "** on " +
+                                                    bot.guilds.cache.get(config.serverID).name + " has been assigned until \`" + finalDateDisplay + "\`.")
+                                                .catch(error => {
+                                                    console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
+                                                });
+                                                if (source == "RECHECK") {
+                                                    bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for new time for the **"+tempRole+"** role was processed for "+username+
+                                                                                                      ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lost the role on: \`"+
+                                                                                                      finalDateDisplay+"\`.");
+                                                }
+                                                else {
+                                                    bot.channels.cache.get(config.mainChannelID).send("✅ PayPal donation for new time for the **"+tempRole+"** role was processed for "+username+
+                                                                                                      ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lost the role on: \`"+
+                                                                                                      finalDateDisplay+"\`.");
+                                                }
+                                            })
+                                            .catch(err => {
+                                                console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 7: (${err})`);
+                                                bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 7: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                                                return;
+                                            });
+                                    })
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 6: (${err})`);
+                                        bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 6: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                                        return;
+                                    });
+                            })
+                            .catch(err => {
+                                console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 3: (${err})`);
+                                bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 3: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                                return;
+                            });
+                    }
+                    else {
+                        // Payment is not complete so we will not assign the role. Everything was saved above for rechecking later
+                        console.warn(`:exclamation: [processPayPalOrder] A new donation has come in but the payment is not \`COMPLETE\`. Information for \`${invoice}\` has been saved for later.`);
+                        bot.channels.cache.get(config.mainChannelID).send(`:exclamation: [processPayPalOrder] A new donation has come in but the payment is not \`COMPLETE\`. Information for \`${invoice}\` has been saved for later.`)
+                           .catch(err => {console.error(GetTimestamp()+err);});
+                    }
+                })
+                .catch(err => {
+                    console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 2: (${err})`);
+                    bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 2: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                    return;
+                });
+        })
+        .catch(err => {
+            console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 1: (${err})`);
+            bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 1: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+            return;
+        });
 }
 
 function SQLConnect() {
