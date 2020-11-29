@@ -2,7 +2,6 @@
 	"token": "APP-BOT-TOKEN-HERE",
 	"botID": "APP-BOT-USER-ID",
 	"ownerID": "YOUR-PERSONAL-USER-ID",
-	"serverName": "YOUR-SERVER-NAME",
 	"serverID": "YOUR-SERVER-ID",
 	"cmdPrefix": "!",
 	"adminRoleName": "ADMIN-ROLE-NAME",

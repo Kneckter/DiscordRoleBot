@@ -171,8 +171,8 @@ setInterval(async function() {
                     // NOTIFY THE USER IN DM THAT THEY WILL EXPIRE
                     if(config.paypal.enabled === "yes") {
                         member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
-                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on " + finalDate +
-                            ". If you would like to keep the role, please send a donation to <" + config.paypal.url +
+                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on \`" + finalDate +
+                            "\`. If you would like to keep the role, please send a donation to <" + config.paypal.url +
                             ">. If you need help, please notify an admin.")
                         .catch(error => {
                             console.error(GetTimestamp() + "Failed to send a DM to user: " + member.id);
@@ -180,15 +180,15 @@ setInterval(async function() {
                     }
                     else {
                         member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
-                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on " + finalDate +
-                            ". If you would like to keep the role, please notify an admin.")
+                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on \`" + finalDate +
+                            "\`. If you would like to keep the role, please notify an admin.")
                         .catch(error => {
                             console.error(GetTimestamp() + "Failed to send a DM to user: " + member.id);
                         });
                     }
                     // NOTIFY THE ADMINS OF THE PENDING EXPIRY
                     bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " will lose their role of: **" +
-                        rName.name + "** in less than 5 days on " + finalDate).catch(err => {console.error(GetTimestamp()+err);});
+                        rName.name + "** in less than 5 days on \`" + finalDate+"\`.").catch(err => {console.error(GetTimestamp()+err);});
                     // UPDATE THE DB TO REMEMBER THAT THEY WERE NOTIFIED
                     await query(`UPDATE temporary_roles SET notified=1, username="${member.user.username}" WHERE userID="${member.id}" AND temporaryRole="${rName.name}"`)
                         .catch(err => {
