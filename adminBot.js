@@ -89,7 +89,7 @@ setInterval(async function() {
                 let orderID = rows[rowNumber].order_id;
 
                 // Get the order details directly from PayPal so it is up-to-date
-                let orderJSON = await getJSONData(bearerToken, `https://api.sandbox.paypal.com/v2/checkout/orders/${orderID}`);
+                let orderJSON = await getJSONData(bearerToken, `https://api.paypal.com/v2/checkout/orders/${orderID}`);
                 if (!orderJSON) {
                     continue;
                 }
@@ -845,7 +845,7 @@ async function handlePayPalData(req, res) {
         }
 
         // Get the order details directly from PayPal in case someone fakes a POST message to this bot
-        let orderJSON = await getJSONData(bearerToken, `https://api.sandbox.paypal.com/v2/checkout/orders/${json.resource.id}`);
+        let orderJSON = await getJSONData(bearerToken, `https://api.paypal.com/v2/checkout/orders/${json.resource.id}`);
         if (!orderJSON) {
             return;
         }
@@ -865,7 +865,7 @@ async function handlePayPalData(req, res) {
         }
 
         // Get the payment details from PayPal
-        let payJSON = await getJSONData(bearerToken, `https://api.sandbox.paypal.com/v2/payments/captures/${json.resource.id}`);
+        let payJSON = await getJSONData(bearerToken, `https://api.paypal.com/v2/payments/captures/${json.resource.id}`);
         if (!payJSON) {
             return;
         }
@@ -909,7 +909,7 @@ async function getBearerToken() {
     return new Promise((resolve, reject) => {
         // Get a bearer token so we can pull some data from PayPal
         request.post({
-            uri: "https://api.sandbox.paypal.com/v1/oauth2/token",
+            uri: "https://api.paypal.com/v1/oauth2/token",
             headers: {
                 "Accept": "application/json",
                 "Accept-Language": "en_US",
