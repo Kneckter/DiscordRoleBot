@@ -290,7 +290,8 @@
                     <table>
                         <tr>
                             <td>
-                                <p><center><h1><?php echo $BUT1_DAYS ?>-Day Donation</h1></center></p>
+                                <p><center><h1><?php echo $BUT1_DAYS ?>-Day Donation</h1>
+                                <img src="https://raw.githubusercontent.com/Kneckter/DiscordRoleBot/pay_sql/30.png" width="200"></center></p>
                                 <p>Amount: $<?php echo $BUT1_VALUE ?>
                                 <br>Days: <?php echo $BUT1_DAYS ?>
                                 <br>Access: <?php echo $BUT1_ACCESS ?></p>
@@ -304,7 +305,8 @@
                                 <?php } ?>
                             </td>
                             <td>
-                                <p><center><h1><?php echo $BUT2_DAYS ?>-Day Donation</h1></center></p>
+                                <p><center><h1><?php echo $BUT2_DAYS ?>-Day Donation</h1>
+                                <img src="https://raw.githubusercontent.com/Kneckter/DiscordRoleBot/pay_sql/60.png" width="200"></center></p>
                                 <p>Amount: $<?php echo $BUT2_VALUE ?>
                                 <br>Days: <?php echo $BUT2_DAYS ?>
                                 <br>Access: <?php echo $BUT2_ACCESS ?></p>
@@ -318,7 +320,8 @@
                                 <?php } ?>
                             </td>
                             <td>
-                                <p><center><h1><?php echo $BUT3_DAYS ?>-Day Donation</h1></center></p>
+                                <p><center><h1><?php echo $BUT3_DAYS ?>-Day Donation</h1>
+                                <img src="https://raw.githubusercontent.com/Kneckter/DiscordRoleBot/pay_sql/90.png" width="200"></center></p>
                                 <p>Amount: $<?php echo $BUT3_VALUE ?>
                                 <br>Days: <?php echo $BUT3_DAYS ?>
                                 <br>Access: <?php echo $BUT3_ACCESS ?></p>
