@@ -62,6 +62,26 @@ bot.on('ready', () => {
             console.log(GetTimestamp()+'[PayPalPost] Incoming POST from: ', clientip);
             await handlePayPalData(req, res);
         });
+        app.get('/stripe', (req, res) => {
+            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+            }
+            else {
+                var clientip = 'unknown'
+            }
+            console.log(GetTimestamp()+'[StripeGet] Someone stopped by from: ', clientip);
+            res.send('Listening...');
+        });
+        app.post('/stripe', async (req, res) => {
+            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+            }
+            else {
+                var clientip = 'unknown'
+            }
+            console.log(GetTimestamp()+'[StripePost] Incoming POST from: ', clientip);
+            await handleStripeData(req, res);
+        });
         app.listen(config.donations.port, config.donations.server, () => console.log(GetTimestamp()+`Listening on ${config.donations.server}:${config.donations.port}...`));
     }
 })();
@@ -190,7 +210,8 @@ setInterval(async function() {
                     bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " will lose their role of: **" +
                         rName.name + "** in less than 5 days on \`" + finalDate+"\`.").catch(err => {console.error(GetTimestamp()+err);});
                     // UPDATE THE DB TO REMEMBER THAT THEY WERE NOTIFIED
-                    await query(`UPDATE temporary_roles SET notified=1, username="${member.user.username}" WHERE userID="${member.id}" AND temporaryRole="${rName.name}"`)
+                    let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
+                    await query(`UPDATE temporary_roles SET notified=1, username="${name}" WHERE userID="${member.id}" AND temporaryRole="${rName.name}"`)
                         .catch(err => {
                             console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 3: (${err})`);
                             process.exit(-1);
@@ -421,12 +442,13 @@ bot.on('message', async message => {
                             startDateVal.setTime(row[0].startDate * 1000);
                             let startDateTime = await formatTimeString(startDateVal);
                             let finalDate = Number(row[0].endDate * 1000) + Number(days * dateMultiplier);
-                            await query(`UPDATE temporary_roles SET endDate="${Math.round(finalDate / 1000)}", notified=0, username="${mentioned.username}" WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
+                            let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
+                            await query(`UPDATE temporary_roles SET endDate="${Math.round(finalDate / 1000)}", notified=0, username="${name}" WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
                                 .then(async result => {
                                     let endDateVal = new Date();
                                     endDateVal.setTime(finalDate);
                                     finalDate = await formatTimeString(endDateVal);
-                                    console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.username + "\" (" + mentioned.id + ") was given " + days + " days by: " + m.user.username + " (" + m.id + ")");
+                                    console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.username + "\" (" + mentioned.id + ") was given " + days + " days by: " + m.user.username + " (" + m.id + ") for the role: "+daRole);
                                     c.send("✅ " + mentioned.username + " has had time added until: `" + finalDate + "`! They were added on: `" + startDateTime + "`");
                                 })
                                 .catch(err => {
@@ -455,13 +477,14 @@ bot.on('message', async message => {
                                 let finalDate = curDate + (Number(args[1]) * dateMultiplier);
                                 finalDateDisplay.setTime(finalDate);
                                 finalDateDisplay = await formatTimeString(finalDateDisplay);
+                                let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
                                 let values = mentioned.user.id+',\''
                                             +daRole+'\','
                                             +Math.round(curDate/1000)+','
                                             +Math.round(finalDate/1000)+','
                                             +m.id
                                             +', 0'+',\''
-                                            +mentioned.user.username+'\'';
+                                            +name+'\'';
                                 await query(`INSERT INTO temporary_roles VALUES(${values});`)
                                     .then(async result => {
                                         let theirRole = g.roles.cache.find(theirRole => theirRole.name === daRole);
@@ -823,11 +846,21 @@ function GetSnowFlake(seconds) {
     return toSnowflake(date);
 }
 
+async function handleStripeData(req, res) {
+    let json = req.body;
+    if (!json) {
+        res.sendStatus(400);
+        console.error(GetTimestamp()+'[handlePayPalData] Bad data without a body.');
+        bot.channels.cache.get(config.mainChannelID).send(":x: Received an **bad** request in the PayPal handler. It had no data in the body.").catch(err => {console.error(GetTimestamp()+err);});
+        return;
+    }
+}
+
 async function handlePayPalData(req, res) {
     let json = req.body;
     if (!json) {
         res.sendStatus(400);
-        console.error(GetTimestamp()+'[handlePayPalData] Bad data');
+        console.error(GetTimestamp()+'[handlePayPalData] Bad data without a body.');
         bot.channels.cache.get(config.mainChannelID).send(":x: Received an **bad** request in the PayPal handler. It had no data in the body.").catch(err => {console.error(GetTimestamp()+err);});
         return;
     }
@@ -973,6 +1006,7 @@ async function processPayPalOrder(orderJSON, source) {
     }
     let order_id = orderJSON.id;
     let username = orderJSON.purchase_units[0].custom_id;
+    username = username.replace(/[^a-zA-Z0-9]/g, '');
     let userID = invoice.split("-")[0];
     let orderDate = invoice.split("-")[1];
     let tempRole = orderJSON.purchase_units[0].items[0].name;
@@ -1049,7 +1083,7 @@ async function processPayPalOrder(orderJSON, source) {
                                             let endDateVal = new Date();
                                             endDateVal.setTime(finalDate);
                                             finalDate = await formatTimeString(endDateVal);
-                                            console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + username + "\" (" + userID + ") was given " + days + " days by: PayPal donation (" + invoice + ")");
+                                            console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + username + "\" (" + userID + ") was given " + days + " days by: PayPal donation (" + invoice + ") for the role: "+tempRole);
                                             // Update the fulfilled column if both of the above are successful
                                             await query(`UPDATE paypal_info SET fulfilled=1 WHERE invoice="${invoice}"`)
                                                 .then(async result => {
@@ -1318,8 +1352,11 @@ bot.on('disconnect', function(closed) {
 });
 
 process.on('unhandledRejection', (reason, p) => {
-    console.error(GetTimestamp() + 'Unhandled Rejection at Promise: ', p);
-    console.error(GetTimestamp() + reason);
+    if(p.method != "delete") {
+        // Only show if this isn't related to deleting a message
+        console.error(GetTimestamp() + 'Unhandled Rejection at Promise: ', p);
+        console.error(GetTimestamp() + reason);
+    }
 });
 
 process.on('uncaughtException', err => {
