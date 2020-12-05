@@ -59,7 +59,7 @@ bot.on('ready', () => {
             else {
                 var clientip = 'unknown'
             }
-            console.log(GetTimestamp()+'[PayPalPost] Incoming POST from: ', clientip);
+            console.log(GetTimestamp()+'[PayPalPost] Incoming POST from: '+clientip+'. Body: '+JSON.stringify(req.body));
             await handlePayPalData(req, res);
         });
         app.get('/stripe', (req, res) => {
@@ -924,14 +924,14 @@ async function handlePayPalData(req, res) {
     else if (eventtype != '') {
         //Log and send msg if there's an event type that isn't supported
         res.send('OK');
-        console.warn(GetTimestamp()+'[handlePayPalData] Received an unsupported event type:', JSON.stringify(json));
+        console.warn(GetTimestamp()+'[handlePayPalData] Received an unsupported event type:', eventtype);
         bot.channels.cache.get(config.mainChannelID).send(":exclamation: Received a PayPal webhook with an unsupported event type of: **" + eventtype + "**. See the console log for details.")
            .catch(err => {console.error(GetTimestamp()+err);});
     }
     else {
         //If there's no event type, it probably isn't from PayPal
         res.sendStatus(400);
-        console.error(GetTimestamp()+'[handlePayPalData] Received an unknown request:', JSON.stringify(json));
+        console.error(GetTimestamp()+'[handlePayPalData] Received an unknown request.');
         bot.channels.cache.get(config.mainChannelID).send(":x: Received an **unknown** request in the PayPal handler. See the console log for details.")
            .catch(err => {console.error(GetTimestamp()+err);});
     }
@@ -1004,16 +1004,7 @@ async function processPayPalOrder(orderJSON, source) {
            .catch(err => {console.error(GetTimestamp()+err);});
         return;
     }
-    let order_id = orderJSON.id;
-    let username = orderJSON.purchase_units[0].custom_id;
-    username = username.replace(/[^a-zA-Z0-9]/g, '');
     let userID = invoice.split("-")[0];
-    let orderDate = invoice.split("-")[1];
-    let tempRole = orderJSON.purchase_units[0].items[0].name;
-    let days = orderJSON.purchase_units[0].items[0].description;
-    let grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
-    let netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
-    let paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
 
     let member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
     // Check if we pulled the member's information correctly or if they left the server.
@@ -1033,6 +1024,11 @@ async function processPayPalOrder(orderJSON, source) {
     // Check if the invoice is already in the DB and fulfilled
     await query(`SELECT * FROM paypal_info WHERE invoice = "${invoice}" LIMIT 1;`)
         .then(async rows => {
+            let order_id = orderJSON.id;
+            let orderDate = invoice.split("-")[1];
+            let tempRole = orderJSON.purchase_units[0].items[0].name;
+            let days = orderJSON.purchase_units[0].items[0].description;
+            let paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
             if (rows[0] && rows[0].fulfilled) {
                 console.log(GetTimestamp()+"This donation has already been fulfilled for invoice: "+invoice);
                 return;
@@ -1072,6 +1068,8 @@ async function processPayPalOrder(orderJSON, source) {
                         // Check if the person already has the requested role
                         await query(`SELECT * FROM temporary_roles WHERE userID = "${userID}" AND temporaryRole = "${tempRole}" LIMIT 1;`)
                             .then(async row => {
+                                let username = orderJSON.purchase_units[0].custom_id;
+                                username = username.replace(/[^a-zA-Z0-9]/g, '');
                                 if (row[0]) {
                                     // They have the role so add time to their account. Update the info to the temp_role table
                                     let startDateVal = new Date();
@@ -1087,6 +1085,14 @@ async function processPayPalOrder(orderJSON, source) {
                                             // Update the fulfilled column if both of the above are successful
                                             await query(`UPDATE paypal_info SET fulfilled=1 WHERE invoice="${invoice}"`)
                                                 .then(async result => {
+                                                    // Messaage the user too, so they know when it has been processed.
+                                                    member.send("Hello " + member.user.username + "! Thank you for your donation! Your role of **" + tempRole + "** on " +
+                                                        bot.guilds.cache.get(config.serverID).name + " has been assigned until \`" + finalDate + "\`.")
+                                                    .catch(error => {
+                                                        console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
+                                                    });
+                                                    let grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
+                                                    let netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
                                                     if (source == "RECHECK") {
                                                         bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for addition time on the **"+tempRole+"** role was processed for "+username+
                                                                                                           ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). Time was added until: \`"+
@@ -1097,12 +1103,6 @@ async function processPayPalOrder(orderJSON, source) {
                                                                                                           ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). Time was added until: \`"+
                                                                                                           finalDate+"\`! They were added on: \`"+startDateTime+"\`.");
                                                     }
-                                                    // Messaage the user too, so they know when it has been processed.
-                                                    member.send("Hello " + member.user.username + "! Thank you for your donation! Your role of **" + tempRole + "** on " +
-                                                        bot.guilds.cache.get(config.serverID).name + " has been assigned until \`" + finalDate + "\`.")
-                                                    .catch(error => {
-                                                        console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
-                                                    });
                                                 })
                                                 .catch(err => {
                                                     console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 5: (${err})`);
@@ -1144,6 +1144,8 @@ async function processPayPalOrder(orderJSON, source) {
                                                 .catch(error => {
                                                     console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
                                                 });
+                                                let grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
+                                                let netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
                                                 if (source == "RECHECK") {
                                                     bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for new time for the **"+tempRole+"** role was processed for "+username+
                                                                                                       ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lost the role on: \`"+
