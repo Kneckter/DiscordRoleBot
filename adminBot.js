@@ -442,7 +442,7 @@ bot.on('message', async message => {
                             startDateVal.setTime(row[0].startDate * 1000);
                             let startDateTime = await formatTimeString(startDateVal);
                             let finalDate = Number(row[0].endDate * 1000) + Number(days * dateMultiplier);
-                            let name = mentioned.user.username.replace(/[^a-zA-Z0-9]/g, '');
+                            let name = mentioned.username.replace(/[^a-zA-Z0-9]/g, '');
                             await query(`UPDATE temporary_roles SET endDate="${Math.round(finalDate / 1000)}", notified=0, username="${name}" WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
                                 .then(async result => {
                                     let endDateVal = new Date();
