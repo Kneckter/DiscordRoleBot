@@ -1006,21 +1006,6 @@ async function processPayPalOrder(orderJSON, source) {
     }
     let userID = invoice.split("-")[0];
 
-    let member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
-    // Check if we pulled the member's information correctly or if they left the server.
-    if(!member) {
-        try {
-            member.user.username = "<@" + userID + ">";
-            member.id = userID;
-        }
-        catch (err) {
-            console.error(GetTimestamp() + "Failed to find a user for ID: " + userID + ". They may have left the server.");
-            bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
-                userID + ". They may have left the server.**").catch(err => {console.error(GetTimestamp()+err);});
-            return;
-        }
-    }
-
     // Check if the invoice is already in the DB and fulfilled
     await query(`SELECT * FROM paypal_info WHERE invoice = "${invoice}" LIMIT 1;`)
         .then(async rows => {
@@ -1050,8 +1035,8 @@ async function processPayPalOrder(orderJSON, source) {
                             payment_verified=1;`
             }
             else {
-                sql_query = `INSERT INTO paypal_info (invoice, userID, orderDate, temporaryRole, days, order_verified, order_json)
-                        VALUES("${invoice}", ${userID}, ${orderDate}, "${tempRole}", ${days}, 1, '''${JSON.stringify(orderJSON)}''', ${order_id})
+                sql_query = `INSERT INTO paypal_info (invoice, userID, orderDate, temporaryRole, days, order_verified, order_json, order_id)
+                        VALUES("${invoice}", ${userID}, ${orderDate}, "${tempRole}", ${days}, 1, '''${JSON.stringify(orderJSON)}''', "${order_id}")
                         ON DUPLICATE KEY UPDATE
                             userID=${userID},
                             orderDate=${orderDate},
@@ -1059,17 +1044,31 @@ async function processPayPalOrder(orderJSON, source) {
                             days=${days},
                             order_verified=1,
                             order_json='''${JSON.stringify(orderJSON)}''',
-                            order_id=${order_id};`
+                            order_id="${order_id}";`
             }
             await query(sql_query)
                 .then(async results => {
                     // If the order has a payment status of complete, assign the time. else, drop out to wait for the payment webhook
-                    if (paymentStatus == "COMPLETED") {
+                    if (paymentStatus == "COMPLETED" || config.donations.forcePaymentStatus == "yes") {
                         // Check if the person already has the requested role
                         await query(`SELECT * FROM temporary_roles WHERE userID = "${userID}" AND temporaryRole = "${tempRole}" LIMIT 1;`)
                             .then(async row => {
                                 let username = orderJSON.purchase_units[0].custom_id;
                                 username = username.replace(/[^a-zA-Z0-9]/g, '');
+                                let member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
+                                // Check if we pulled the member's information correctly or if they left the server.
+                                if(!member) {
+                                    try {
+                                        member.user.username = "<@" + userID + ">";
+                                        member.id = userID;
+                                    }
+                                    catch (err) {
+                                        console.error(GetTimestamp() + "Failed to find a user for ID: " + userID + ". They may have left the server.");
+                                        bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
+                                            userID + ". They may have left the server.**").catch(err => {console.error(GetTimestamp()+err);});
+                                        return;
+                                    }
+                                }
                                 if (row[0]) {
                                     // They have the role so add time to their account. Update the info to the temp_role table
                                     let startDateVal = new Date();
@@ -1086,13 +1085,19 @@ async function processPayPalOrder(orderJSON, source) {
                                             await query(`UPDATE paypal_info SET fulfilled=1 WHERE invoice="${invoice}"`)
                                                 .then(async result => {
                                                     // Messaage the user too, so they know when it has been processed.
-                                                    member.send("Hello " + member.user.username + "! Thank you for your donation! Your role of **" + tempRole + "** on " +
+                                                    member.send("Hello " + username + "! Thank you for your donation! Your role of **" + tempRole + "** on " +
                                                         bot.guilds.cache.get(config.serverID).name + " has been assigned until \`" + finalDate + "\`.")
                                                     .catch(error => {
                                                         console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
                                                     });
-                                                    let grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
-                                                    let netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
+                                                    let grossValue = "N/A";
+                                                    let netValue = "N/A";
+                                                    if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value) {
+                                                        grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
+                                                    }
+                                                    if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value) {
+                                                        netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
+                                                    }
                                                     if (source == "RECHECK") {
                                                         bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for addition time on the **"+tempRole+"** role was processed for "+username+
                                                                                                           ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). Time was added until: \`"+
@@ -1119,33 +1124,43 @@ async function processPayPalOrder(orderJSON, source) {
                                 }
                                 let curDate = new Date().getTime();
                                 let finalDate = curDate + (Number(days) * dateMultiplier);
-                                let values = member.user.id+',\''
+                                let values = userID+',\''
                                             +tempRole+'\','
                                             +Math.round(curDate/1000)+','
                                             +Math.round(finalDate/1000)+','
                                             +config.ownerID
                                             +', 0'+',\''
-                                            +member.user.username+'\'';
+                                            +username+'\'';
                                 await query(`INSERT INTO temporary_roles VALUES(${values});`)
                                     .then(async result => {
                                         let finalDateDisplay = new Date();
                                         finalDateDisplay.setTime(finalDate);
                                         finalDateDisplay = await formatTimeString(finalDateDisplay);
-                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" +
-                                                    member.user.id + ") was given the \"" + tempRole + "\" role by : PayPal donation (" + invoice + ")");
+                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + username + "\" (" +
+                                                    userID + ") was given the \"" + tempRole + "\" role by : PayPal donation (" + invoice + ")");
                                         // Update the fulfilled column if both of the above are successful
                                         await query(`UPDATE paypal_info SET fulfilled=1 WHERE invoice="${invoice}"`)
                                             .then(async result => {
                                                 // Assign the role to the user and send messages
                                                 let theirRole = bot.guilds.cache.get(config.serverID).roles.cache.find(theirRole => theirRole.name === tempRole);
-                                                member.roles.add(theirRole).catch(err => {console.error(GetTimestamp()+err);});
+                                                member.roles.add(theirRole).catch(err => {
+                                                    console.error(GetTimestamp()+err);
+                                                    bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to assign the role to: (\`${userID}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                                                    return;
+                                                });
                                                 member.send("Hello " + member.user.username + "! Thank you for your donation! Your role of **" + tempRole + "** on " +
                                                     bot.guilds.cache.get(config.serverID).name + " has been assigned until \`" + finalDateDisplay + "\`.")
                                                 .catch(error => {
                                                     console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
                                                 });
-                                                let grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
-                                                let netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
+                                                let grossValue = "N/A";
+                                                let netValue = "N/A";
+                                                if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value) {
+                                                    grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
+                                                }
+                                                if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value) {
+                                                    netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
+                                                }
                                                 if (source == "RECHECK") {
                                                     bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for new time for the **"+tempRole+"** role was processed for "+username+
                                                                                                       ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lost the role on: \`"+
@@ -1177,9 +1192,11 @@ async function processPayPalOrder(orderJSON, source) {
                     }
                     else {
                         // Payment is not complete so we will not assign the role. Everything was saved above for rechecking later
-                        console.warn(`:exclamation: [processPayPalOrder] A new donation has come in but the payment is not \`COMPLETE\`. Information for \`${invoice}\` has been saved for later.`);
-                        bot.channels.cache.get(config.mainChannelID).send(`:exclamation: [processPayPalOrder] A new donation has come in but the payment is not \`COMPLETE\`. Information for \`${invoice}\` has been saved for later.`)
-                           .catch(err => {console.error(GetTimestamp()+err);});
+                        if (source != "RECHECK") {
+                            console.warn(GetTimestamp()+`:exclamation: [processPayPalOrder] A new donation has come in but the payment is not \`COMPLETE\`. Information for \`${invoice}\` has been saved for later.`);
+                            bot.channels.cache.get(config.mainChannelID).send(`:exclamation: [processPayPalOrder] A new donation has come in but the payment is not \`COMPLETE\`. Information for \`${invoice}\` has been saved for later.`)
+                               .catch(err => {console.error(GetTimestamp()+err);});
+                        }
                     }
                 })
                 .catch(err => {
@@ -1354,11 +1371,12 @@ bot.on('disconnect', function(closed) {
 });
 
 process.on('unhandledRejection', (reason, p) => {
-    if(p.method != "delete") {
+    console.error(GetTimestamp() + 'Unhandled Rejection at Promise: ', p);
+    //if(!reason.includes("Unknown Message")) {
         // Only show if this isn't related to deleting a message
-        console.error(GetTimestamp() + 'Unhandled Rejection at Promise: ', p);
-        console.error(GetTimestamp() + reason);
-    }
+        //console.error(GetTimestamp() + 'Unhandled Rejection at Promise: ', p);
+        //console.error(GetTimestamp() + reason);
+    //}
 });
 
 process.on('uncaughtException', err => {
@@ -1367,7 +1385,8 @@ process.on('uncaughtException', err => {
         return;
     }
     else {
-        console.error(GetTimestamp() + err, GetTimestamp() + 'Uncaught Exception thrown');
+        console.error(GetTimestamp() + 'Uncaught Exception thrown');
+        console.error(GetTimestamp() + err);
         process.exit(1);
     }
 });

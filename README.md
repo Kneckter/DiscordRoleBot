@@ -58,6 +58,7 @@ There are also options for scheduling auto delete for different channels.
               Current supporting PayPal webhooks. You should leave the server address set to the local address and proxy pass to it from a reverse proxy.
               The client_ID and client_secret come from the PayPal Dev portal for the app.
               The merchant_id comes from PayPal and is used to ensure funds went to you and not someone else.
+			  The forcePaymentStatus option is used if your account is still under review and your payments are all going into pending status.
 "db" - These settings are required and specify the DB server's settings.
 "mainChannelID" - This is a string for the channel the bot will use to post all of its messages to. Right click the Discord channel to copy its ID.
 "clearAtMidnight" - This is an array of strings for the channel the bot will clear messages from at midnight local time.
