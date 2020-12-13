@@ -1014,9 +1014,20 @@ async function processPayPalOrder(orderJSON, source) {
             let tempRole = orderJSON.purchase_units[0].items[0].name;
             let days = orderJSON.purchase_units[0].items[0].description;
             let paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
-            if (rows[0] && rows[0].fulfilled) {
-                console.log(GetTimestamp()+"This donation has already been fulfilled for invoice: "+invoice);
-                return;
+            let paymentVerified = 0;
+            let fulfilled = 0;
+            let orderVerified = 0;
+            if (rows[0]) {
+                paymentVerified = rows[0].payment_verified;
+                fulfilled = rows[0].fulfilled;
+                orderVerified = rows[0].order_verified;
+                if (fulfilled && orderVerified && paymentVerified) {
+                    console.log(GetTimestamp()+"This donation has already been fulfilled for invoice: "+invoice);
+                    return;
+                }
+                else if (fulfilled && !paymentVerified) {
+                    console.log(GetTimestamp()+"This donation has already been fulfilled but the payment was not verified yet. This is for invoice: "+invoice);
+                }
             }
             // Write to the DB if there isn't a row and if there is but unfulfilled
             let sql_query = ``;
@@ -1049,7 +1060,7 @@ async function processPayPalOrder(orderJSON, source) {
             await query(sql_query)
                 .then(async results => {
                     // If the order has a payment status of complete, assign the time. else, drop out to wait for the payment webhook
-                    if (paymentStatus == "COMPLETED" || config.donations.forcePaymentStatus == "yes") {
+                    if (!fulfilled && (paymentStatus == "COMPLETED" || config.donations.forcePaymentStatus == "yes")) {
                         // Check if the person already has the requested role
                         await query(`SELECT * FROM temporary_roles WHERE userID = "${userID}" AND temporaryRole = "${tempRole}" LIMIT 1;`)
                             .then(async row => {
@@ -1092,19 +1103,17 @@ async function processPayPalOrder(orderJSON, source) {
                                                     });
                                                     let grossValue = "N/A";
                                                     let netValue = "N/A";
-                                                    if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value) {
+                                                    if (paymentStatus == "COMPLETED") {
                                                         grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
-                                                    }
-                                                    if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value) {
                                                         netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
                                                     }
                                                     if (source == "RECHECK") {
-                                                        bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for addition time on the **"+tempRole+"** role was processed for "+username+
+                                                        bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for **addition** time on the **"+tempRole+"** role was processed for "+username+
                                                                                                           ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). Time was added until: \`"+
                                                                                                           finalDate+"\`! They were added on: \`"+startDateTime+"\`.");
                                                     }
                                                     else {
-                                                        bot.channels.cache.get(config.mainChannelID).send("✅ PayPal donation for addition time on the **"+tempRole+"** role was processed for "+username+
+                                                        bot.channels.cache.get(config.mainChannelID).send("✅ PayPal donation for **addition** time on the **"+tempRole+"** role was processed for "+username+
                                                                                                           ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). Time was added until: \`"+
                                                                                                           finalDate+"\`! They were added on: \`"+startDateTime+"\`.");
                                                     }
@@ -1155,20 +1164,18 @@ async function processPayPalOrder(orderJSON, source) {
                                                 });
                                                 let grossValue = "N/A";
                                                 let netValue = "N/A";
-                                                if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value) {
+                                                if (paymentStatus == "COMPLETED") {
                                                     grossValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value;
-                                                }
-                                                if (orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value) {
                                                     netValue = orderJSON.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value;
                                                 }
                                                 if (source == "RECHECK") {
-                                                    bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for new time for the **"+tempRole+"** role was processed for "+username+
-                                                                                                      ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lost the role on: \`"+
+                                                    bot.channels.cache.get(config.mainChannelID).send("✅ **LATE** PayPal donation for **new** time for the **"+tempRole+"** role was processed for "+username+
+                                                                                                      ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lose the role on: \`"+
                                                                                                       finalDateDisplay+"\`.");
                                                 }
                                                 else {
-                                                    bot.channels.cache.get(config.mainChannelID).send("✅ PayPal donation for new time for the **"+tempRole+"** role was processed for "+username+
-                                                                                                      ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lost the role on: \`"+
+                                                    bot.channels.cache.get(config.mainChannelID).send("✅ PayPal donation for **new** time for the **"+tempRole+"** role was processed for "+username+
+                                                                                                      ". It was for "+days+" days at $"+grossValue+" (net=$"+netValue+"). They will lose the role on: \`"+
                                                                                                       finalDateDisplay+"\`.");
                                                 }
                                             })
@@ -1189,6 +1196,11 @@ async function processPayPalOrder(orderJSON, source) {
                                 bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 3: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
                                 return;
                             });
+                    }
+                    else if (fulfilled && paymentStatus == "COMPLETED" && !paymentVerified) {
+                        // This would be when a payment is completed after an order has been fulfilled
+                        bot.channels.cache.get(config.mainChannelID).send(`:white_check_mark: [processPayPalOrder] A payment has been marked \`COMPLETE\` for invoice \`${invoice}\`, which was already fulfilled.`)
+                               .catch(err => {console.error(GetTimestamp()+err);});
                     }
                     else {
                         // Payment is not complete so we will not assign the role. Everything was saved above for rechecking later
