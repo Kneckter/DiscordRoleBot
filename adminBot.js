@@ -695,7 +695,7 @@ bot.on('guildMemberAdd', async member => {
         });
 });
 
-bot.on('guildMemberUpdate', (oldMember, newMember) => {
+bot.on('guildMemberUpdate', async (oldMember, newMember) => {
     // Used to stop users from adding roles without a database entry
     if (config.blockManualRoles != "yes") {
         return;
@@ -706,9 +706,38 @@ bot.on('guildMemberUpdate', (oldMember, newMember) => {
     }
     if(JSON.stringify(oldMember._roles) != JSON.stringify(newMember._roles)) {
         // If the arrays are different, check what role was added
-        // Check the DB to see if only the newly added roles have entries.
-        // If there are no roles on the block list, remove any of the newly added roles that do not have entries
-        // If there are roles on the block list, remove any of the newly added roles that do not have entries and are on the block list
+        for(let num = "0"; num < newMember._roles.length; num++) {
+            if (!oldMember._roles.includes(newMember._roles[num])) {
+                if (config.blockTheseRoles[0]) {
+                    if (!config.blockTheseRoles.includes(newMember._roles[num])) {
+                        continue;
+                    }
+                }
+                // If the role is not on the block list or there isn't a block list, check the database
+                let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.id === newMember._roles[num]);
+                console.log("Check the database for role "+rName.id+" "+rName.name);
+                await query(`SELECT * FROM temporary_roles WHERE userID="${newMember.user.id}" and temporaryRole="${rName.name} LIMIT 1"`)
+                    .then(async rows => {
+                        if(!rows[0]) {
+                            // No entry so remove the role from the user
+                            newMember.roles.remove(rName).then(async member => {
+                                bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " has **lost** their role of: **" +
+                                    rName.name + "** - it was manually added when that wasn't allowed").catch(err => {console.error(GetTimestamp()+err);});
+                                console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" + member.id +
+                                    ") have lost their role: " + rName.name + "... it was manually added when that wasn't allowed");
+                            }).catch(error => {
+                                console.error(GetTimestamp() + error.message);
+                                bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not remove the " +
+                                    rName.name + " role from " + newMember.user.username + "!**").catch(err => {console.error(GetTimestamp()+err);});
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberUpdate 1: (${err})`);
+                        return;
+                    });
+            }
+        }
     }
 });
 
