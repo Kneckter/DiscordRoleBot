@@ -39,5 +39,11 @@
     "clearEveryHourButSkip6am": [],
     "clearEvery5min": [],
     "clearWeeklyOnThursday630": [],
-    "clearMonthlyAtMidnightDay1": []
+    "clearMonthlyAtMidnightDay1": [],
+    "restoreRoleOnJoin": "no",
+    "blockManualRoles": "no",
+    "blockTheseRoles": [
+        "ROLE-ID-1",
+        "Leave the array empty to block all manual role changes"
+    ]
 }

@@ -58,7 +58,7 @@ There are also options for scheduling auto delete for different channels.
               Current supporting PayPal webhooks. You should leave the server address set to the local address and proxy pass to it from a reverse proxy.
               The client_ID and client_secret come from the PayPal Dev portal for the app.
               The merchant_id comes from PayPal and is used to ensure funds went to you and not someone else.
-			  The forcePaymentStatus option is used if your account is still under review and your payments are all going into pending status.
+              The forcePaymentStatus option is used if your account is still under review and your payments are all going into pending status.
 "db" - These settings are required and specify the DB server's settings.
 "mainChannelID" - This is a string for the channel the bot will use to post all of its messages to. Right click the Discord channel to copy its ID.
 "clearAtMidnight" - This is an array of strings for the channel the bot will clear messages from at midnight local time.
@@ -66,6 +66,9 @@ There are also options for scheduling auto delete for different channels.
 "clearEvery5min" - This is an array of strings for the channel the bot will clear messages from every 5 minutes.
 "clearWeeklyOnThursday630" - This is an array of strings for the channel the bot will clear messages from at 6:30a on Thursdays only.
 "clearMonthlyAtMidnightDay1" - This is an array of strings for the channel the bot will clear messages from at midnight on the first day of the month only.
+"restoreRoleOnJoin" - This is a string to enable the feature that restores a user's temp roles if they leave and rejoin the server.
+"blockManualRoles" - This is a string to enable the feature that will remove roles that were manually added so only the ones with database records are kept.
+"blockTheseRoles" - This is an array of strings for the role IDs that the blockManualRoles feature will check for manual assignments. Leave the array blank to watch all roles.
 ```
 
 # LAUNCHING IT
@@ -79,7 +82,7 @@ Instead, add it to PM2 with `pm2 start ecosystem.config.js`
 # USAGE
 
 `!help`<br>
---`!check`   »   to check the time left on your subscription<br>
+--`!check <ROLE-NAME>`   »   to check the time left on your subscription<br>
 --`!map`   »   a link to our web map<br>
 --`!paypal`   »   for a link to our PayPal<br>
 

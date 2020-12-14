@@ -28,62 +28,63 @@ bot.on('ready', () => {
 });
 
 (async () => {
-    if (config.donations.enabled == "yes" ) {
-        // Basic security protection middleware
-        app.use(helmet());
-
-        // Body parsing middleware
-        app.use(express.json({ limit: '10kb' }));
-
-        // Parsing routes
-        app.get('/', (req, res) => res.send('Listening...'));
-        app.post('/', (req, res) => {
-            const body = req.body;
-            console.log(GetTimestamp()+'[Webhook Test] Received webhook payload: ', body);
-            res.send('OK');
-        });
-        app.get('/paypal', (req, res) => {
-            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
-                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
-            }
-            else {
-                var clientip = 'unknown'
-            }
-            console.log(GetTimestamp()+'[PayPalGet] Someone stopped by from: ', clientip);
-            res.send('Listening...');
-        });
-        app.post('/paypal', async (req, res) => {
-            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
-                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
-            }
-            else {
-                var clientip = 'unknown'
-            }
-            console.log(GetTimestamp()+'[PayPalPost] Incoming POST from: '+clientip+'. Body: '+JSON.stringify(req.body));
-            await handlePayPalData(req, res);
-        });
-        app.get('/stripe', (req, res) => {
-            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
-                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
-            }
-            else {
-                var clientip = 'unknown'
-            }
-            console.log(GetTimestamp()+'[StripeGet] Someone stopped by from: ', clientip);
-            res.send('Listening...');
-        });
-        app.post('/stripe', async (req, res) => {
-            if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
-                var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
-            }
-            else {
-                var clientip = 'unknown'
-            }
-            console.log(GetTimestamp()+'[StripePost] Incoming POST from: ', clientip);
-            await handleStripeData(req, res);
-        });
-        app.listen(config.donations.port, config.donations.server, () => console.log(GetTimestamp()+`Listening on ${config.donations.server}:${config.donations.port}...`));
+    if (config.donations.enabled != "yes" ) {
+        return;
     }
+    // Basic security protection middleware
+    app.use(helmet());
+
+    // Body parsing middleware
+    app.use(express.json({ limit: '10kb' }));
+
+    // Parsing routes
+    app.get('/', (req, res) => res.send('Listening...'));
+    app.post('/', (req, res) => {
+        const body = req.body;
+        console.log(GetTimestamp()+'[Webhook Test] Received webhook payload: ', body);
+        res.send('OK');
+    });
+    app.get('/paypal', (req, res) => {
+        if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+            var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+        }
+        else {
+            var clientip = 'unknown'
+        }
+        console.log(GetTimestamp()+'[PayPalGet] Someone stopped by from: ', clientip);
+        res.send('Listening...');
+    });
+    app.post('/paypal', async (req, res) => {
+        if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+            var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+        }
+        else {
+            var clientip = 'unknown'
+        }
+        console.log(GetTimestamp()+'[PayPalPost] Incoming POST from: '+clientip+'. Body: '+JSON.stringify(req.body));
+        await handlePayPalData(req, res);
+    });
+    app.get('/stripe', (req, res) => {
+        if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+            var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+        }
+        else {
+            var clientip = 'unknown'
+        }
+        console.log(GetTimestamp()+'[StripeGet] Someone stopped by from: ', clientip);
+        res.send('Listening...');
+    });
+    app.post('/stripe', async (req, res) => {
+        if (req.headers['x-forwarded-for'] || req.headers['x-real-ip']){
+            var clientip = req.headers['x-forwarded-for'].split(', ')[0] || req.headers['x-real-ip'].split(', ')[0];
+        }
+        else {
+            var clientip = 'unknown'
+        }
+        console.log(GetTimestamp()+'[StripePost] Incoming POST from: ', clientip);
+        await handleStripeData(req, res);
+    });
+    app.listen(config.donations.port, config.donations.server, () => console.log(GetTimestamp()+`Listening on ${config.donations.server}:${config.donations.port}...`));
 })();
 
 // ##########################################################################
@@ -139,10 +140,11 @@ setInterval(async function() {
                 dbTime = parseInt(rows[rowNumber].endDate) * 1000;
                 notify = rows[rowNumber].notified;
                 daysLeft = dbTime - timeNow;
+                let leftServer = rows[rowNumber].leftServer;
                 let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
                 member = bot.guilds.cache.get(config.serverID).members.cache.get(rows[rowNumber].userID);
                 // Check if we pulled the member's information correctly or if they left the server.
-                if(!member) {
+                if(!member && !leftServer) {
                     try {
                         member.user.username = "<@" + rows[rowNumber].userID + ">";
                         member.id = rows[rowNumber].userID;
@@ -155,7 +157,7 @@ setInterval(async function() {
                     }
                 }
                 // Update usernames for legacy data
-                if(!rows[rowNumber].username) {
+                if(!rows[rowNumber].username && !leftServer) {
                     let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
                     await query(`UPDATE temporary_roles SET username="${name}" WHERE userID="${member.id}"`)
                         .catch(err => {
@@ -165,6 +167,19 @@ setInterval(async function() {
                 }
                 // CHECK IF THEIR ACCESS HAS EXPIRED
                 if(daysLeft < 1) {
+                    // If they left the server, remove the entry without attempting the role removal
+                    if(leftServer) {
+                        await query(`DELETE FROM temporary_roles WHERE userID='${rows[rowNumber].userID}' AND temporaryRole='${rName.name}'`)
+                            .catch(err => {
+                                console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 5: (${err})`);
+                                process.exit(-1);
+                            });
+                        bot.channels.cache.get(config.mainChannelID).send("⚠ " + rows[rowNumber].username + " has **left** the server and **lost** their role of: **" +
+                            rName.name + "** - their **temporary** access has __EXPIRED__ 😭 ").catch(err => {console.error(GetTimestamp()+err);});
+                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + rows[rowNumber].username + "\" (" + rows[rowNumber].userID +
+                            ") has left the server and lost their role: " + rName.name + "... time EXPIRED");
+                        continue;
+                    }
                     // REMOVE ROLE FROM MEMBER IN GUILD
                     member.roles.remove(rName).then(async member => {
                         bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " has **lost** their role of: **" +
@@ -184,12 +199,12 @@ setInterval(async function() {
                     });
                 }
                 // CHECK IF THERE ARE ONLY HAVE 5 DAYS LEFT
-                if(daysLeft < 432000000 && notify == "0") {
+                if(daysLeft < 432000000 && notify == "0" && !leftServer) {
                     let endDateVal = new Date();
                     endDateVal.setTime(dbTime);
                     let finalDate = await formatTimeString(endDateVal);
                     // NOTIFY THE USER IN DM THAT THEY WILL EXPIRE
-                    if(config.paypal.enabled === "yes") {
+                    if(config.paypal.enabled == "yes") {
                         member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
                             bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on \`" + finalDate +
                             "\`. If you would like to keep the role, please send a donation to <" + config.paypal.url +
@@ -299,10 +314,10 @@ bot.on('message', async message => {
         }
         if(!args[0]) {
             cmds = "`!check`   \\\u00BB   to check the time left on your subscription\n"
-            if(config.mapMain.enabled === "yes") {
+            if(config.mapMain.enabled == "yes") {
                 cmds += "`!map`   \\\u00BB   a link to our web map\n"
             }
-            if(config.paypal.enabled === "yes") {
+            if(config.paypal.enabled == "yes") {
                 cmds += "`!paypal`   \\\u00BB   for a link to our PayPal\n"
             }
         }
@@ -315,20 +330,21 @@ bot.on('message', async message => {
     }
     // ######################### PAYPAL/SUBSCRIBE ########################
     if(command === "paypal") {
-        if(config.paypal.enabled === "yes") {
-            let embedMSG = {
-                'color': 0xFF0000,
-                'title': 'Please visit PayPal to donate',
-                'url': config.paypal.url,
-                'thumbnail': {
-                    'url': config.paypal.img
-                },
-                'description': 'Thank you! \nYour support is greatly appreciated.'
-            };
-            message.delete();
-            m.send({ embed: embedMSG }).catch(err => {console.error(GetTimestamp()+err);});
+        if(config.paypal.enabled != "yes") {
             return;
         }
+        let embedMSG = {
+            'color': 0xFF0000,
+            'title': 'Please visit PayPal to donate',
+            'url': config.paypal.url,
+            'thumbnail': {
+                'url': config.paypal.img
+            },
+            'description': 'Thank you! \nYour support is greatly appreciated.'
+        };
+        message.delete();
+        m.send({ embed: embedMSG }).catch(err => {console.error(GetTimestamp()+err);});
+        return;
     }
     // ############################## TEMPORARY ROLES ##############################
     if(command === "tr") {
@@ -484,7 +500,7 @@ bot.on('message', async message => {
                                             +Math.round(finalDate/1000)+','
                                             +m.id
                                             +', 0'+',\''
-                                            +name+'\'';
+                                            +name+'\', 0';
                                 await query(`INSERT INTO temporary_roles VALUES(${values});`)
                                     .then(async result => {
                                         let theirRole = g.roles.cache.find(theirRole => theirRole.name === daRole);
@@ -598,11 +614,116 @@ bot.on('message', async message => {
     }
     // ######################### MAP ###################################
     if(command === "map") {
-        if(config.mapMain.enabled === "yes") {
-            message.delete();
-            return m.send("Our official webmap: \n<" + config.mapMain.url + ">").catch(err => {console.error(GetTimestamp()+err);});
+        if(config.mapMain.enabled != "yes") {
+            return;
         }
+        message.delete();
+        m.send("Our official webmap: \n<" + config.mapMain.url + ">").catch(err => {console.error(GetTimestamp()+err);});
+        return;
     }
+});
+
+// Check for bot events other than messages
+bot.on('guildMemberRemove', async member => {
+    // Used to note database entries when users leave the server.
+    let guild = member.guild.id;
+    if(guild != config.serverID) {
+        return;
+    }
+    // Check if the user had any temp roles
+    await query(`SELECT * FROM temporary_roles WHERE userID="${member.id}"`)
+        .then(async rows => {
+            // Update all entries from the database
+            if (rows[0]) {
+                await query(`UPDATE temporary_roles SET leftServer = 1 WHERE userID="${member.id}"`)
+                    .then(async result => {
+                        let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
+                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + name + "\" (" + member.id + ") has left the server. All temp role assignments have been marked in the database.");
+                        bot.channels.cache.get(config.mainChannelID).send(":exclamation: " + name + " has left the server. All temp role assignments have been marked in the database.");
+                    })
+                    .catch(err => {
+                        console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberRemove 2: (${err})`);
+                        return;
+                    });
+            }
+        })
+        .catch(err => {
+            console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberRemove 1: (${err})`);
+            return;
+        });
+});
+
+bot.on('guildMemberAdd', async member => {
+    // Add the role from the DB if they rejoin the server
+    if (config.restoreRoleOnJoin != "yes") {
+        return;
+    }
+    let guild = member.guild.id;
+    if(guild != config.serverID) {
+        return;
+    }
+    // Check the DB is the user has any entries
+    await query(`SELECT * FROM temporary_roles WHERE userID="${member.id}"`)
+        .then(async rows => {
+            if(!rows[0]) {
+                // No entries found so no temp roles to assign
+                return;
+            }
+            // Iterate the rows and add the appropriate role to the user
+            for(let rowNumber = "0"; rowNumber < rows.length; rowNumber++) {
+                let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
+                member.roles.add(rName).then(async member => {
+                    let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
+                    console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + name + "\" (" + member.id + ") has rejoined the server. The " + rName.name + " temp role has been readded.");
+                    bot.channels.cache.get(config.mainChannelID).send(":white_check_mark: " + name + " has rejoined the server. The " + rName.name + " temp role has been readded.");
+                    // Update the database in case they were marked as leftServer
+                    await query(`UPDATE temporary_roles SET leftServer = 0 WHERE userID='${member.id}' AND temporaryRole='${rName.name}'`)
+                        .catch(err => {
+                            console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberAdd 2: (${err})`);
+                            process.exit(-1);
+                        });
+                }).catch(error => {
+                    console.error(GetTimestamp() + error.message);
+                    bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not add the " + rName.name + " role to " + member.user.username + "!**")
+                        .catch(err => {console.error(GetTimestamp()+err);});
+                });
+            }
+        })
+        .catch(err => {
+            console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberAdd 1: (${err})`);
+            return;
+        });
+});
+
+bot.on('guildMemberUpdate', (oldMember, newMember) => {
+    // Used to stop users from adding roles without a database entry
+    if (config.blockManualRoles != "yes") {
+        return;
+    }
+    let guild = newMember.guild.id;
+    if(guild != config.serverID) {
+        return;
+    }
+    if(JSON.stringify(oldMember._roles) != JSON.stringify(newMember._roles)) {
+        // If the arrays are different, check what role was added
+        // Check the DB to see if only the newly added roles have entries.
+        // If there are no roles on the block list, remove any of the newly added roles that do not have entries
+        // If there are roles on the block list, remove any of the newly added roles that do not have entries and are on the block list
+    }
+});
+
+bot.on('error', function(err) {
+    if(typeof err == 'object') {
+        err = JSON.stringify(err);
+    }
+    console.error(GetTimestamp() + 'Uncaught exception (error): ' + err);
+    RestartBot();
+    return;
+});
+
+bot.on('disconnect', function(closed) {
+    console.error(GetTimestamp() + 'Disconnected from Discord');
+    return;
 });
 
 function GetTimestamp() {
@@ -623,7 +744,7 @@ function RestartBot(type) {
 
 async function InitDB() {
     // Create MySQL tabels
-    let currVersion = 3;
+    let currVersion = 4;
     let dbVersion = 0;
     await query(`CREATE TABLE IF NOT EXISTS metadata (
                         \`key\` VARCHAR(50) PRIMARY KEY NOT NULL,
@@ -744,6 +865,22 @@ async function InitDB() {
                                         process.exit(-1);
                                     });
                                 console.log(GetTimestamp()+'[InitDB] Migration #3 complete.');
+                            }
+                            else if (dbVersion == 3) {
+                                // Wait 30 seconds and let user know we are about to migrate the database and for them to make a backup until we handle backups and rollbacks.
+                                console.log(GetTimestamp()+'[InitDB] MIGRATION IS ABOUT TO START IN 30 SECONDS, PLEASE MAKE SURE YOU HAVE A BACKUP!!!');
+                                await wait(30 * 1000);
+                                await query(`ALTER TABLE \`temporary_roles\` ADD COLUMN leftServer tinyint(1) unsigned DEFAULT 0;`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}b: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}a: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                console.log(GetTimestamp()+'[InitDB] Migration #4 complete.');
                             }
                         }
                         console.log(GetTimestamp()+'[InitDB] Migration process done.');
@@ -1349,37 +1486,6 @@ schedule.scheduleJob('0 0 1 * *', () => {
             DeleteBulkMessages(channel, 3600);
         }
     }
-});
-
-// Check for bot events other than messages
-/*
-bot.on('guildMemberRemove', member => {
-    // Remove the role if they leave?
-});
-
-bot.on('guildMemberAdd', member => {
-    // Add the role from the DB if they rejoin the server
-    // Cannot have the function for removing roles when they leave because there would be no record
-    // Maybe another column to note that they left and delete them after the time expires
-});
-
-bot.on('guildMemberUpdate', (oldMember, newMember) => {
-    // To stop others from adding roles without using the bot
-    // Check for the person that made the change compared to the bot's ID
-});*/
-
-bot.on('error', function(err) {
-    if(typeof err == 'object') {
-        err = JSON.stringify(err);
-    }
-    console.error(GetTimestamp() + 'Uncaught exception (error): ' + err);
-    RestartBot();
-    return;
-});
-
-bot.on('disconnect', function(closed) {
-    console.error(GetTimestamp() + 'Disconnected from Discord');
-    return;
 });
 
 process.on('unhandledRejection', (reason, p) => {
