@@ -715,6 +715,7 @@ bot.on('guildMemberUpdate', async (oldMember, newMember) => {
                 }
                 // If the role is not on the block list or there isn't a block list, check the database
                 let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.id === newMember._roles[num]);
+                await wait(5 * 1000);
                 console.log("Check the database for role "+rName.id+" "+rName.name);
                 await query(`SELECT * FROM temporary_roles WHERE userID="${newMember.user.id}" and temporaryRole="${rName.name} LIMIT 1"`)
                     .then(async rows => {
@@ -1305,7 +1306,7 @@ async function processPayPalOrder(orderJSON, source) {
                                             +Math.round(finalDate/1000)+','
                                             +config.ownerID
                                             +', 0'+',\''
-                                            +username+'\'';
+                                            +username+'\',0';
                                 await query(`INSERT INTO temporary_roles VALUES(${values});`)
                                     .then(async result => {
                                         let finalDateDisplay = new Date();
