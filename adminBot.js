@@ -1,7 +1,3 @@
-//paypal orders table; paypal payments table
-//Post to the channel when an order/payment is received, how much, and for whom
-//Package the donation.php?
-//Add onGuildMember events from authBot?
 const Discord = require('discord.js');
 const bot = new Discord.Client();
 const config = require('./config.json');
@@ -715,9 +711,8 @@ bot.on('guildMemberUpdate', async (oldMember, newMember) => {
                 }
                 // If the role is not on the block list or there isn't a block list, check the database
                 let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.id === newMember._roles[num]);
-                await wait(5 * 1000);
-                console.log("Check the database for role "+rName.id+" "+rName.name);
-                await query(`SELECT * FROM temporary_roles WHERE userID="${newMember.user.id}" and temporaryRole="${rName.name} LIMIT 1"`)
+                await wait(1 * 1000);
+                await query(`SELECT * FROM temporary_roles WHERE userID="${newMember.user.id}" and temporaryRole="${rName.name}" LIMIT 1`)
                     .then(async rows => {
                         if(!rows[0]) {
                             // No entry so remove the role from the user
@@ -1180,7 +1175,11 @@ async function processPayPalOrder(orderJSON, source) {
             let orderDate = invoice.split("-")[1];
             let tempRole = orderJSON.purchase_units[0].items[0].name;
             let days = orderJSON.purchase_units[0].items[0].description;
-            let paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
+            // If payment status doesn't exist, the customer may have an issue with their payment method
+            let paymentStatus = '';
+            if (orderJSON.purchase_units[0].payments.captures[0].status) {
+                paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
+            }
             let paymentVerified = 0;
             let fulfilled = 0;
             let orderVerified = 0;
@@ -1227,7 +1226,7 @@ async function processPayPalOrder(orderJSON, source) {
             await query(sql_query)
                 .then(async results => {
                     // If the order has a payment status of complete, assign the time. else, drop out to wait for the payment webhook
-                    if (!fulfilled && (paymentStatus == "COMPLETED" || config.donations.forcePaymentStatus == "yes")) {
+                    if (!fulfilled && paymentStatus != '' && paymentStatus != 'DECLINED' && (paymentStatus == "COMPLETED" || config.donations.forcePaymentStatus == "yes")) {
                         // Check if the person already has the requested role
                         await query(`SELECT * FROM temporary_roles WHERE userID = "${userID}" AND temporaryRole = "${tempRole}" LIMIT 1;`)
                             .then(async row => {
@@ -1368,6 +1367,21 @@ async function processPayPalOrder(orderJSON, source) {
                         // This would be when a payment is completed after an order has been fulfilled
                         bot.channels.cache.get(config.mainChannelID).send(`:white_check_mark: [processPayPalOrder] A payment has been marked \`COMPLETE\` for invoice \`${invoice}\`, which was already fulfilled.`)
                                .catch(err => {console.error(GetTimestamp()+err);});
+                    }
+                    else if (paymentStatus == '' || paymentStatus == 'DECLINED') {
+                        // Payment was declined or something went wrong with their payment.
+                        if (source != "RECHECK") {
+                            if (paymentStatus == '') {
+                                console.warn(GetTimestamp()+`:x: [processPayPalOrder] Failed to find a payment method. Information for \`${invoice}\` has been saved for later.`);
+                                bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to find a payment method. Information for \`${invoice}\` has been saved for later.`)
+                                   .catch(err => {console.error(GetTimestamp()+err);});
+                            }
+                            else if (paymentStatus == 'DECLINED') {
+                                console.warn(GetTimestamp()+`:x: [processPayPalOrder] Failed to process payment, the status is \`DECLINED\`. Information for \`${invoice}\` has been saved for later.`);
+                                bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to process payment, the status is \`DECLINED\`. Information for \`${invoice}\` has been saved for later.`)
+                                   .catch(err => {console.error(GetTimestamp()+err);});
+                            }
+                        }
                     }
                     else {
                         // Payment is not complete so we will not assign the role. Everything was saved above for rechecking later

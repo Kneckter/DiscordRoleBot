@@ -267,10 +267,14 @@
                                                                 currency_code: '<?php echo $CURRENCY ?>',
                                                                 value: value
                                                             },
-                                                            quantity: '1'
+                                                            quantity: '1',
+                                                            category: 'DIGITAL_GOODS'
                                                         }
                                                     ]
-                                                }]
+                                                }],
+                                                application_context :  {
+                                                    shipping_preference: 'NO_SHIPPING'
+                                                }
                                             });
                                         },
                                         onApprove: function(data, actions) {
