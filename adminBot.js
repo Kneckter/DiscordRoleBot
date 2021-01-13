@@ -148,7 +148,8 @@ setInterval(async function() {
                     catch (err) {
                         console.error(GetTimestamp() + "Failed to find a user for ID: " + rows[rowNumber].userID + ". They may have left the server.");
                         bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: " +
-                            rows[rowNumber].userID + ". They may have left the server.**").catch(err => {console.error(GetTimestamp()+err);});
+                            rows[rowNumber].userID + " <@" + rows[rowNumber].userID + ">. They may have left the server.**")
+                            .catch(err => {console.error(GetTimestamp()+err);});
                         continue;
                     }
                 }
@@ -1242,7 +1243,8 @@ async function processPayPalOrder(orderJSON, source) {
                                     catch (err) {
                                         console.error(GetTimestamp() + "Failed to find a user for ID: " + userID + ". They may have left the server.");
                                         bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
-                                            userID + ". They may have left the server.**").catch(err => {console.error(GetTimestamp()+err);});
+                                            userID + " <@" + userID + ">. They may have left the server.**")
+                                            .catch(err => {console.error(GetTimestamp()+err);});
                                         return;
                                     }
                                 }
