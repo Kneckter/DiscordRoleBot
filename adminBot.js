@@ -89,7 +89,7 @@ bot.on('ready', () => {
 // DATABASE TIMER FOR TEMPORARY ROLES
 setInterval(async function() {
     // Process any outstanding donations before checking roles
-    await query(`SELECT * FROM paypal_info WHERE fulfilled=0`)
+    await query(`SELECT * FROM paypal_info WHERE fulfilled=0 AND rejection=0`)
         .then(async rows => {
             if(!rows[0]) {
                 return;
@@ -132,26 +132,15 @@ setInterval(async function() {
                 return;
             }
             for(rowNumber = "0"; rowNumber < rows.length; rowNumber++) {
-                let member = [];
                 dbTime = parseInt(rows[rowNumber].endDate) * 1000;
                 notify = rows[rowNumber].notified;
                 daysLeft = dbTime - timeNow;
                 let leftServer = rows[rowNumber].leftServer;
                 let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
-                member = bot.guilds.cache.get(config.serverID).members.cache.get(rows[rowNumber].userID);
+                let member = await getMember(rows[rowNumber].userID);
                 // Check if we pulled the member's information correctly or if they left the server.
                 if(!member && !leftServer) {
-                    try {
-                        member.user.username = "<@" + rows[rowNumber].userID + ">";
-                        member.id = rows[rowNumber].userID;
-                    }
-                    catch (err) {
-                        console.error(GetTimestamp() + "Failed to find a user for ID: " + rows[rowNumber].userID + ". They may have left the server.");
-                        bot.channels.cache.get(config.mainChannelID).send("**⚠ Could not find a user for ID: " +
-                            rows[rowNumber].userID + " <@" + rows[rowNumber].userID + ">. They may have left the server.**")
-                            .catch(err => {console.error(GetTimestamp()+err);});
-                        continue;
-                    }
+                    continue;
                 }
                 // Update usernames for legacy data
                 if(!rows[rowNumber].username && !leftServer) {
@@ -770,7 +759,7 @@ function RestartBot(type) {
 
 async function InitDB() {
     // Create MySQL tabels
-    let currVersion = 4;
+    let currVersion = 5;
     let dbVersion = 0;
     await query(`CREATE TABLE IF NOT EXISTS metadata (
                         \`key\` VARCHAR(50) PRIMARY KEY NOT NULL,
@@ -907,6 +896,22 @@ async function InitDB() {
                                         process.exit(-1);
                                     });
                                 console.log(GetTimestamp()+'[InitDB] Migration #4 complete.');
+                            }
+                            else if (dbVersion == 4) {
+                                // Wait 30 seconds and let user know we are about to migrate the database and for them to make a backup until we handle backups and rollbacks.
+                                console.log(GetTimestamp()+'[InitDB] MIGRATION IS ABOUT TO START IN 30 SECONDS, PLEASE MAKE SURE YOU HAVE A BACKUP!!!');
+                                await wait(30 * 1000);
+                                await query(`ALTER TABLE \`paypal_info\` ADD COLUMN rejection tinyint(1) unsigned DEFAULT 0;`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}b: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}a: (${err})`);
+                                        process.exit(-1);
+                                    });
+                                console.log(GetTimestamp()+'[InitDB] Migration #5 complete.');
                             }
                         }
                         console.log(GetTimestamp()+'[InitDB] Migration process done.');
@@ -1231,23 +1236,8 @@ async function processPayPalOrder(orderJSON, source) {
                         // Check if the person already has the requested role
                         await query(`SELECT * FROM temporary_roles WHERE userID = "${userID}" AND temporaryRole = "${tempRole}" LIMIT 1;`)
                             .then(async row => {
-                                let username = orderJSON.purchase_units[0].custom_id;
-                                username = username.replace(/[^a-zA-Z0-9]/g, '');
-                                let member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
-                                // Check if we pulled the member's information correctly or if they left the server.
-                                if(!member) {
-                                    try {
-                                        member.user.username = "<@" + userID + ">";
-                                        member.id = userID;
-                                    }
-                                    catch (err) {
-                                        console.error(GetTimestamp() + "Failed to find a user for ID: " + userID + ". They may have left the server.");
-                                        bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
-                                            userID + " <@" + userID + ">. They may have left the server.**")
-                                            .catch(err => {console.error(GetTimestamp()+err);});
-                                        return;
-                                    }
-                                }
+                                let username = orderJSON.purchase_units[0].custom_id.replace(/[^a-zA-Z0-9]/g, '');
+                                let member = await getMember(userID);
                                 if (row[0]) {
                                     // They have the role so add time to their account. Update the info to the temp_role table
                                     let startDateVal = new Date();
@@ -1372,17 +1362,30 @@ async function processPayPalOrder(orderJSON, source) {
                     }
                     else if (paymentStatus == '' || paymentStatus == 'DECLINED') {
                         // Payment was declined or something went wrong with their payment.
-                        if (source != "RECHECK") {
-                            if (paymentStatus == '') {
-                                console.warn(GetTimestamp()+`:x: [processPayPalOrder] Failed to find a payment method. Information for \`${invoice}\` has been saved for later.`);
-                                bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to find a payment method. Information for \`${invoice}\` has been saved for later.`)
-                                   .catch(err => {console.error(GetTimestamp()+err);});
-                            }
-                            else if (paymentStatus == 'DECLINED') {
-                                console.warn(GetTimestamp()+`:x: [processPayPalOrder] Failed to process payment, the status is \`DECLINED\`. Information for \`${invoice}\` has been saved for later.`);
-                                bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to process payment, the status is \`DECLINED\`. Information for \`${invoice}\` has been saved for later.`)
-                                   .catch(err => {console.error(GetTimestamp()+err);});
-                            }
+                        if (source != "RECHECK" && paymentStatus == '') {
+                            console.warn(GetTimestamp()+`:x: [processPayPalOrder] Failed to find a payment method. Information for \`${invoice}\` has been saved for later.`);
+                            bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to find a payment method. Information for \`${invoice}\` has been saved for later.`)
+                               .catch(err => {console.error(GetTimestamp()+err);});
+                        }
+                        if (paymentStatus == 'DECLINED') {
+                            let username = orderJSON.purchase_units[0].custom_id.replace(/[^a-zA-Z0-9]/g, '');
+                            let member = await getMember(userID);
+                            // Update the rejection column if the payment is declined
+                            await query(`UPDATE paypal_info SET rejection=1 WHERE invoice="${invoice}"`)
+                                .then(async result => {
+                                    member.send("Hello " + member.user.username + "! The payment method for your order has been declined. Please check your PayPal account to resolve the issue. No charge was incurred for this order.")
+                                    .catch(error => {
+                                        console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
+                                    });
+                                    console.warn(GetTimestamp()+`:x: [processPayPalOrder] Failed to process payment, the status is \`DECLINED\`. Information for \`${invoice}\` has been saved for later reference.`);
+                                    bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to process payment, the status is \`DECLINED\`. Information for \`${invoice}\` has been saved for later reference.`)
+                                       .catch(err => {console.error(GetTimestamp()+err);});
+                                })
+                                .catch(err => {
+                                    console.error(GetTimestamp()+`[processPayPalOrder] Failed to execute order query 8: (${err})`);
+                                    bot.channels.cache.get(config.mainChannelID).send(`:x: [processPayPalOrder] Failed to execute order query 8: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                                    return;
+                                });
                         }
                     }
                     else {
@@ -1463,6 +1466,28 @@ async function formatTimeString(date) {
 
         let results = year + "-" + month + "-" + day + " @" + hour + ":" + minute + ":" + second;
         return resolve(results);
+    });
+}
+
+async function getMember(userID) {
+    return new Promise((resolve, reject) => {
+        let member = [];
+        member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
+        // Check if we pulled the member's information correctly or if they left the server.
+        if(!member) {
+            try {
+                member.user.username = "<@" + userID + ">";
+                member.id = userID;
+            }
+            catch (err) {
+                console.error(GetTimestamp() + "Failed to find a user for ID: " + userID + ". They may have left the server.");
+                bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
+                    userID + " <@" + userID + ">. They may have left the server.**")
+                    .catch(err => {console.error(GetTimestamp()+err);});
+                return reject(err);
+            }
+        }
+        return resolve(member);
     });
 }
 
