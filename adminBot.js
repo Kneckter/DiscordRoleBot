@@ -283,14 +283,15 @@ bot.on('message', async message => {
         message.delete();
         if(args[0] === "mods") {
             if(m.roles.cache.has(ModR.id) || m.roles.cache.has(AdminR.id)) {
-                cmds = "`!temprole @mention <DAYS> <ROLE-NAME>`   \\\u00BB   to assign a temporary roles\n" +
-                    "`!temprole check @mention <ROLE-NAME>`   \\\u00BB   to check the time left on a temporary role assignment\n" +
-                    "`!temprole remove @mention <ROLE-NAME>`   \\\u00BB   to remove a temporary role assignment\n" +
-                    "`!temprole add @mention <ROLE-NAME> <DAYS>`   \\\u00BB   to add more time to a temporary role assignment\n" +
-                    "`!message <min-seconds> <max-seconds>`   \\\u00BB   to bulk delete messages. min and max are optional\n"
+                cmds = "`" + config.cmdPrefix + "temprole @mention <DAYS> <ROLE-NAME>`   \\\u00BB   to assign a temporary roles\n" +
+                    "`" + config.cmdPrefix + "temprole check @mention <ROLE-NAME>`   \\\u00BB   to check the time left on a temporary role assignment\n" +
+                    "`" + config.cmdPrefix + "temprole remove @mention <ROLE-NAME>`   \\\u00BB   to remove a temporary role assignment\n" +
+                    "`" + config.cmdPrefix + "temprole add @mention <ROLE-NAME> <DAYS>`   \\\u00BB   to add more time to a temporary role assignment\n" +
+                    "`" + config.cmdPrefix + "message <min-seconds> <max-seconds>`   \\\u00BB   to bulk delete messages. min and max are optional\n" +
+                    "`" + config.cmdPrefix + "restart`   \\\u00BB   to manually restart the bot\n"
             }
             else {
-                message.reply("You are **NOT** allowed to use this command! \ntry using: `!commads`").then((message) => {
+                message.reply("You are **NOT** allowed to use this command! \ntry using: `" + config.cmdPrefix + "commands`").then((message) => {
                     message.delete({
                         timeout: 10000
                     });
@@ -299,12 +300,12 @@ bot.on('message', async message => {
             }
         }
         if(!args[0]) {
-            cmds = "`!check`   \\\u00BB   to check the time left on your subscription\n"
+            cmds = "`" + config.cmdPrefix + "check`   \\\u00BB   to check the time left on your subscription\n"
             if(config.mapMain.enabled == "yes") {
-                cmds += "`!map`   \\\u00BB   a link to our web map\n"
+                cmds += "`" + config.cmdPrefix + "map`   \\\u00BB   a link to our web map\n"
             }
             if(config.paypal.enabled == "yes") {
-                cmds += "`!paypal`   \\\u00BB   for a link to our PayPal\n"
+                cmds += "`" + config.cmdPrefix + "paypal`   \\\u00BB   for a link to our PayPal\n"
             }
         }
         c.send(cmds).then((message) => {
@@ -333,13 +334,13 @@ bot.on('message', async message => {
         return;
     }
     // ############################## TEMPORARY ROLES ##############################
-    if(command === "tr") {
+    if(command === "tr" || command === "temprole") {
         // ROLES ARE CASE SENSITIVE TO RESET MESSAGE AND ARGUMENTS
         msg = message.content;
         args = msg.split(" ").slice(1);
         if(m.roles.cache.has(ModR.id) || m.roles.cache.has(AdminR.id) || m.id === config.ownerID) {
             if(!args[0]) {
-                message.reply("syntax:\n `!temprole @mention <DAYS> <ROLE-NAME>`,\n or `!temprole remove @mention role`\n or `!temprole check @mention role`");
+                message.reply("syntax:\n `" + config.cmdPrefix + "temprole @mention <DAYS> <ROLE-NAME>`,\n or `" + config.cmdPrefix + "temprole remove @mention role`\n or `" + config.cmdPrefix + "temprole check @mention role`");
                 return;
             }
             else if(!mentioned) {
@@ -347,7 +348,7 @@ bot.on('message', async message => {
                 return;
             }
             else if(!args[2]) {
-                message.reply("incomplete data, please try: \n `!temprole @mention <DAYS> <ROLE-NAME>`,\n `!temprole remove @mention role`\n `!temprole check @mention role`\n `!temprole add @mention role 2`");
+                message.reply("incomplete data, please try: \n `" + config.cmdPrefix + "temprole @mention <DAYS> <ROLE-NAME>`,\n `" + config.cmdPrefix + "temprole remove @mention role`\n `" + config.cmdPrefix + "temprole check @mention role`\n `" + config.cmdPrefix + "temprole add @mention role 2`");
                 return;
             }
             else {
@@ -431,7 +432,7 @@ bot.on('message', async message => {
                         return;
                     }
                     if(!Number(days)) {
-                        message.reply("Error: The third value after the command has to be **X** number of days: `!tr add @" + mentioned.username + " Role 30`");
+                        message.reply("Error: The third value after the command has to be **X** number of days: `" + config.cmdPrefix + "tr add @" + mentioned.username + " Role 30`");
                         return;
                     }
                     await query(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
@@ -466,7 +467,7 @@ bot.on('message', async message => {
                 }
                 else {
                     if(!Number(args[1])) {
-                        message.reply("Error: Second value after the command has to be **X** number of days, IE:\n`!" + command + " @" + mentioned.username + " 90 Role`");
+                        message.reply("Error: Second value after the command has to be **X** number of days, IE:\n`" + config.cmdPrefix + command + " @" + mentioned.username + " 90 Role`");
                         return;
                     }
                     // ADD MEMBER TO DATASE, AND ADD THE ROLE TO MEMBER
@@ -502,7 +503,7 @@ bot.on('message', async message => {
                                     });
                             }
                             else {
-                                message.reply("This user already has the role **" + daRole + "** try using `!temprole remove @" + mentioned.user.username + " " + daRole + "` if you want to reset their role.");
+                                message.reply("This user already has the role **" + daRole + "** try using `" + config.cmdPrefix + "temprole remove @" + mentioned.user.username + " " + daRole + "` if you want to reset their role.");
                             }
                         })
                         .catch(err => {
@@ -553,6 +554,21 @@ bot.on('message', async message => {
             return;
         }
     }
+    // ############################## Restart Bot ##############################
+    if(command === "restart") {
+        if(m.roles.cache.has(ModR.id) || m.roles.cache.has(AdminR.id) || m.id === config.ownerID) {
+            RestartBot("manual");
+        }
+        else {
+            message.delete();
+            message.reply("You are **NOT** allowed to use this command!").then((message) => {
+                message.delete({
+                    timeout: 10000
+                });
+            }).catch(err => {console.error(GetTimestamp()+err);});
+            return;
+        }
+    }
     // ############################## CHECK ##############################
     if(command === "check") {
         let dateMultiplier = 86400000;
@@ -560,7 +576,7 @@ bot.on('message', async message => {
         args = msg.split(" ").slice(1);
         if(!args[0]) {
             message.delete();
-            m.send("Please enter the role you want to check like `!check Trainer`");
+            m.send("Please enter the role you want to check like `" + config.cmdPrefix + "check Trainer`");
             return;
         }
         // ROLES WITH SPACES
@@ -1475,11 +1491,12 @@ async function getMember(userID) {
         member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
         // Check if we pulled the member's information correctly or if they left the server.
         if(!member) {
-            try {
-                member.user.username = "<@" + userID + ">";
-                member.id = userID;
-            }
-            catch (err) {
+            bot.channels.cache.get(config.mainChannelID).send(":exclamation: Failed to get user ID: " +
+                userID + " <@" + userID + "> from the cache. Tagging them to force the cache update.")
+                .catch(err => {console.error(GetTimestamp()+err);});
+            member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
+            // If it still doesn't exist, return an error
+            if(!member) {
                 console.error(GetTimestamp() + "Failed to find a user for ID: " + userID + ". They may have left the server.");
                 bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
                     userID + " <@" + userID + ">. They may have left the server.**")
