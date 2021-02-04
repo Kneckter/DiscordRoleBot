@@ -1199,7 +1199,7 @@ async function processPayPalOrder(orderJSON, source) {
             let days = orderJSON.purchase_units[0].items[0].description;
             // If payment status doesn't exist, the customer may have an issue with their payment method
             let paymentStatus = '';
-            if (orderJSON.purchase_units[0].payments.captures[0].status) {
+            if (orderJSON.purchase_units[0].payments && orderJSON.purchase_units[0].payments.captures) {
                 paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
             }
             let paymentVerified = 0;
