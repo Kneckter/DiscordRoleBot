@@ -135,15 +135,11 @@ setInterval(async function() {
                 dbTime = parseInt(rows[rowNumber].endDate) * 1000;
                 notify = rows[rowNumber].notified;
                 daysLeft = dbTime - timeNow;
-                let leftServer = rows[rowNumber].leftServer;
                 let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
+                let leftServer = rows[rowNumber].leftServer;
                 let member = await getMember(rows[rowNumber].userID);
-                // Check if we pulled the member's information correctly or if they left the server.
-                if(!member && !leftServer) {
-                    continue;
-                }
                 // Update usernames for legacy data
-                if(!rows[rowNumber].username && !leftServer) {
+                if(!leftServer && !rows[rowNumber].username) {
                     let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
                     await query(`UPDATE temporary_roles SET username="${name}" WHERE userID="${member.id}"`)
                         .catch(err => {
@@ -627,32 +623,7 @@ bot.on('message', async message => {
 
 // Check for bot events other than messages
 bot.on('guildMemberRemove', async member => {
-    // Used to note database entries when users leave the server.
-    let guild = member.guild.id;
-    if(guild != config.serverID) {
-        return;
-    }
-    // Check if the user had any temp roles
-    await query(`SELECT * FROM temporary_roles WHERE userID="${member.id}"`)
-        .then(async rows => {
-            // Update all entries from the database
-            if (rows[0]) {
-                await query(`UPDATE temporary_roles SET leftServer = 1 WHERE userID="${member.id}"`)
-                    .then(async result => {
-                        let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
-                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + name + "\" (" + member.id + ") has left the server. All temp role assignments have been marked in the database.");
-                        bot.channels.cache.get(config.mainChannelID).send(":exclamation: " + name + " has left the server. All temp role assignments have been marked in the database.");
-                    })
-                    .catch(err => {
-                        console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberRemove 2: (${err})`);
-                        return;
-                    });
-            }
-        })
-        .catch(err => {
-            console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberRemove 1: (${err})`);
-            return;
-        });
+    await guildMemberRemove(member);
 });
 
 bot.on('guildMemberAdd', async member => {
@@ -1217,6 +1188,9 @@ async function processPayPalOrder(orderJSON, source) {
                     console.log(GetTimestamp()+"This donation has already been fulfilled but the payment was not verified yet. This is for invoice: "+invoice);
                 }
             }
+            // Scrub the personal names of quotes
+            orderJSON.payer.name.given_name = orderJSON.payer.name.given_name.replace(/[^a-zA-Z0-9]/g, '');
+            orderJSON.payer.name.surname = orderJSON.payer.name.surname.replace(/[^a-zA-Z0-9]/g, '');
             // Write to the DB if there isn't a row and if there is but unfulfilled
             let sql_query = ``;
             if (paymentStatus == "COMPLETED") {
@@ -1254,6 +1228,9 @@ async function processPayPalOrder(orderJSON, source) {
                             .then(async row => {
                                 let username = orderJSON.purchase_units[0].custom_id.replace(/[^a-zA-Z0-9]/g, '');
                                 let member = await getMember(userID);
+                                if(!member) {
+                                    return;
+                                }
                                 if (row[0]) {
                                     // They have the role so add time to their account. Update the info to the temp_role table
                                     let startDateVal = new Date();
@@ -1386,6 +1363,9 @@ async function processPayPalOrder(orderJSON, source) {
                         if (paymentStatus == 'DECLINED') {
                             let username = orderJSON.purchase_units[0].custom_id.replace(/[^a-zA-Z0-9]/g, '');
                             let member = await getMember(userID);
+                            if(!member) {
+                                return;
+                            }
                             // Update the rejection column if the payment is declined
                             await query(`UPDATE paypal_info SET rejection=1 WHERE invoice="${invoice}"`)
                                 .then(async result => {
@@ -1486,14 +1466,17 @@ async function formatTimeString(date) {
 }
 
 async function getMember(userID) {
-    return new Promise((resolve, reject) => {
-        let member = [];
+    return new Promise(async (resolve) => {
+        var member = {};
+        await bot.guilds.cache.get(config.serverID).members.fetch();
         member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
         // Check if we pulled the member's information correctly or if they left the server.
         if(!member) {
             bot.channels.cache.get(config.mainChannelID).send(":exclamation: Failed to get user ID: " +
                 userID + " <@" + userID + "> from the cache. Tagging them to force the cache update.")
                 .catch(err => {console.error(GetTimestamp()+err);});
+            await bot.guilds.cache.get(config.serverID).members.fetch();
+            await wait(1 * 1000); // 1 second
             member = bot.guilds.cache.get(config.serverID).members.cache.get(userID);
             // If it still doesn't exist, return an error
             if(!member) {
@@ -1501,11 +1484,43 @@ async function getMember(userID) {
                 bot.channels.cache.get(config.mainChannelID).send("**:x: Could not find a user for ID: " +
                     userID + " <@" + userID + ">. They may have left the server.**")
                     .catch(err => {console.error(GetTimestamp()+err);});
-                return reject(err);
+                member = {"guild":{"id": config.serverID}, "id": userID}
+                await guildMemberRemove(member)
+                return resolve(false);
             }
         }
         return resolve(member);
     });
+}
+
+async function guildMemberRemove(member) {
+    // Used to note database entries when users leave the server.
+    let guild = member.guild.id;
+    if(guild != config.serverID) {
+        return;
+    }
+    // Check if the user had any temp roles
+    await query(`SELECT * FROM temporary_roles WHERE userID="${member.id}"`)
+        .then(async rows => {
+            // Update all entries from the database
+            if (rows[0]) {
+                await query(`UPDATE temporary_roles SET leftServer = 1 WHERE userID="${member.id}"`)
+                    .then(async result => {
+                        var name = "Unknown";
+                        name = rows[0].username;
+                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + name + "\" (" + member.id + ") has left the server. All temp role assignments have been marked in the database.");
+                        bot.channels.cache.get(config.mainChannelID).send(":exclamation: " + name + " has left the server. All temp role assignments have been marked in the database.");
+                    })
+                    .catch(err => {
+                        console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberRemove 2: (${err})`);
+                        return;
+                    });
+            }
+        })
+        .catch(err => {
+            console.error(GetTimestamp()+`[InitDB] Failed to execute query in guildMemberRemove 1: (${err})`);
+            return;
+        });
 }
 
 // Run message clearing at midnight
