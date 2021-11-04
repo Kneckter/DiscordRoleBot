@@ -11,6 +11,7 @@ const mysql = require('mysql');
 const request = require('request');
 const wait = async ms => new Promise(done => setTimeout(done, ms));
 const dateMultiplier = 86400000;
+const daysNotice = config.daysNotice * dateMultiplier;
 
 // log our bot in
 bot.login(config.token);
@@ -181,14 +182,14 @@ setInterval(async function() {
                     });
                 }
                 // CHECK IF THERE ARE ONLY HAVE 5 DAYS LEFT
-                if(daysLeft < 432000000 && notify == "0" && !leftServer) {
+                if(daysLeft < daysNotice && notify == "0" && !leftServer) {
                     let endDateVal = new Date();
                     endDateVal.setTime(dbTime);
                     let finalDate = await formatTimeString(endDateVal);
                     // NOTIFY THE USER IN DM THAT THEY WILL EXPIRE
                     if(config.paypal.enabled == "yes") {
                         member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
-                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on \`" + finalDate +
+                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than " + config.daysNotice + " days on \`" + finalDate +
                             "\`. If you would like to keep the role, please send a donation to <" + config.paypal.url +
                             ">. If you need help, please notify an admin.")
                         .catch(error => {
@@ -197,7 +198,7 @@ setInterval(async function() {
                     }
                     else {
                         member.send("Hello " + member.user.username + "! Your role of **" + rows[rowNumber].temporaryRole + "** on " +
-                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than 5 days on \`" + finalDate +
+                            bot.guilds.cache.get(config.serverID).name + " will be removed in less than " + config.daysNotice + " days on \`" + finalDate +
                             "\`. If you would like to keep the role, please notify an admin.")
                         .catch(error => {
                             console.error(GetTimestamp() + "Failed to send a DM to user: " + member.id);
@@ -205,7 +206,7 @@ setInterval(async function() {
                     }
                     // NOTIFY THE ADMINS OF THE PENDING EXPIRY
                     bot.channels.cache.get(config.mainChannelID).send("⚠ " + member.user.username + " will lose their role of: **" +
-                        rName.name + "** in less than 5 days on \`" + finalDate+"\`.").catch(err => {console.error(GetTimestamp()+err);});
+                        rName.name + "** in less than " + config.daysNotice + " days on \`" + finalDate+"\`.").catch(err => {console.error(GetTimestamp()+err);});
                     // UPDATE THE DB TO REMEMBER THAT THEY WERE NOTIFIED
                     let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
                     await query(`UPDATE temporary_roles SET notified=1, username="${name}" WHERE userID="${member.id}" AND temporaryRole="${rName.name}"`)
@@ -214,7 +215,7 @@ setInterval(async function() {
                             process.exit(-1);
                         });
                     console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + member.user.username + "\" (" + member.id +
-                        ") has been notified that they will lose their role (" + rName.name + ") in less than 5 days on " + finalDate);
+                        ") has been notified that they will lose their role (" + rName.name + ") in less than " + config.daysNotice + " days on " + finalDate);
                 }
             }
         })
@@ -1147,7 +1148,7 @@ async function getJSONData(bearerToken, uri) {
 async function processPayPalOrder(orderJSON, source) {
     // Save some variables and write to the table
     let invoice = orderJSON.purchase_units[0].invoice_id;
-    if (invoice.length != 29) {
+    if (invoice.length < 27 && invoice.length > 31) {
         console.error(GetTimestamp()+"Invalid invoice length for invoice: "+invoice);
         bot.channels.cache.get(config.mainChannelID).send(":x: Invalid invoice length for invoice: "+invoice).catch(err => {console.error(GetTimestamp()+err);});
         return;
