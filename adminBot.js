@@ -1147,7 +1147,7 @@ async function getJSONData(bearerToken, uri) {
 async function processPayPalOrder(orderJSON, source) {
     // Save some variables and write to the table
     let invoice = orderJSON.purchase_units[0].invoice_id;
-    if (invoice.length != 29) {
+    if (invoice.length < 27 && invoice.length > 31) {
         console.error(GetTimestamp()+"Invalid invoice length for invoice: "+invoice);
         bot.channels.cache.get(config.mainChannelID).send(":x: Invalid invoice length for invoice: "+invoice).catch(err => {console.error(GetTimestamp()+err);});
         return;
