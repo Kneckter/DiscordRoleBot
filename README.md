@@ -69,6 +69,7 @@ There are also options for scheduling auto delete for different channels.
 "restoreRoleOnJoin" - This is a string to enable the feature that restores a user's temp roles if they leave and rejoin the server.
 "blockManualRoles" - This is a string to enable the feature that will remove roles that were manually added so only the ones with database records are kept.
 "blockTheseRoles" - This is an array of strings for the role IDs that the blockManualRoles feature will check for manual assignments. Leave the array blank to watch all roles.
+"daysNotice" - This is an int used to control how many days are left on a temp role before notifying the user that they will lose it.
 ```
 
 # LAUNCHING IT
