@@ -138,15 +138,18 @@ setInterval(async function() {
                 daysLeft = dbTime - timeNow;
                 let rName = bot.guilds.cache.get(config.serverID).roles.cache.find(rName => rName.name === rows[rowNumber].temporaryRole);
                 let leftServer = rows[rowNumber].leftServer;
-                let member = await getMember(rows[rowNumber].userID);
-                // Update usernames for legacy data
-                if(!leftServer && !rows[rowNumber].username) {
-                    let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
-                    await query(`UPDATE temporary_roles SET username="${name}" WHERE userID="${member.id}"`)
-                        .catch(err => {
-                            console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 4: (${err})`);
-                        });
-                    console.log(GetTimestamp() + "Updated the username for "+member.id+" to "+name);
+                if(!leftServer) {
+                    // Grab the member info
+                    let member = await getMember(rows[rowNumber].userID);
+                    if(!rows[rowNumber].username) {
+                        // Update usernames for legacy data
+                        let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
+                        await query(`UPDATE temporary_roles SET username="${name}" WHERE userID="${member.id}"`)
+                            .catch(err => {
+                                console.error(GetTimestamp()+`[InitDB] Failed to execute role check query 4: (${err})`);
+                            });
+                        console.log(GetTimestamp() + "Updated the username for "+member.id+" to "+name);
+                    }
                 }
                 // CHECK IF THEIR ACCESS HAS EXPIRED
                 if(daysLeft < 1) {
