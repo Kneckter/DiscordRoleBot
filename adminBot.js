@@ -140,7 +140,7 @@ setInterval(async function() {
                 let leftServer = rows[rowNumber].leftServer;
                 if(!leftServer) {
                     // Grab the member info
-                    let member = await getMember(rows[rowNumber].userID);
+                    var member = await getMember(rows[rowNumber].userID);
                     if(!rows[rowNumber].username) {
                         // Update usernames for legacy data
                         let name = member.user.username.replace(/[^a-zA-Z0-9]/g, '');
