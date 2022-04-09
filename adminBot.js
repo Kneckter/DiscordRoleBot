@@ -297,9 +297,7 @@ bot.on('messageCreate', async message => {
             }
             else {
                 message.reply("You are **NOT** allowed to use this command! \ntry using: `" + config.cmdPrefix + "commands`").then((message) => {
-                    message.delete({
-                        timeout: 10000
-                    });
+                    setTimeout(() => message.delete(), 10000);
                 }).catch(err => {console.error(GetTimestamp()+err);});
                 return;
             }
@@ -314,9 +312,7 @@ bot.on('messageCreate', async message => {
             }
         }
         c.send(cmds).then((message) => {
-            message.delete({
-                timeout: 10000
-            });
+            setTimeout(() => message.delete(), 10000);
         }).catch(err => {console.error(GetTimestamp()+err);});
         return;
     }
@@ -521,9 +517,7 @@ bot.on('messageCreate', async message => {
         else {
             message.delete();
             message.reply("You are **NOT** allowed to use this command!").then((message) => {
-                message.delete({
-                    timeout: 10000
-                });
+                setTimeout(() => message.delete(), 10000);
             }).catch(err => {console.error(GetTimestamp()+err);});
             return;
         }
@@ -552,9 +546,7 @@ bot.on('messageCreate', async message => {
         else {
             message.delete();
             message.reply("You are **NOT** allowed to use this command!").then((message) => {
-                message.delete({
-                    timeout: 10000
-                });
+                setTimeout(() => message.delete(), 10000);
             }).catch(err => {console.error(GetTimestamp()+err);});
             return;
         }
@@ -567,9 +559,7 @@ bot.on('messageCreate', async message => {
         else {
             message.delete();
             message.reply("You are **NOT** allowed to use this command!").then((message) => {
-                message.delete({
-                    timeout: 10000
-                });
+                setTimeout(() => message.delete(), 10000);
             }).catch(err => {console.error(GetTimestamp()+err);});
             return;
         }
