@@ -1,6 +1,6 @@
 {
   "name": "DiscordRoleBot",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A Discord bot that is used to manage temp roles automatically.",
   "main": "adminBot.js",
   "scripts": {
@@ -17,12 +17,11 @@
   },
   "homepage": "https://github.com/Kneckter/DiscordRoleBot#readme",
   "dependencies": {
-    "discord.js": "12.4.1",
-    "node-schedule": "1.3.2",
-    "sqlite3": "git+https://github.com/mapbox/node-sqlite3.git",
-    "express": "^4.17.1",
-    "helmet": "^4.1.0",
-    "mysql": "^2.18.1",
-    "request": "^2.88.2"
+    "discord.js": "13.6.0",
+    "node-schedule": "2.1.0",
+    "express": "4.17.3",
+    "helmet": "5.0.2",
+    "mysql": "2.18.1",
+    "request": "2.88.2"
   }
 }

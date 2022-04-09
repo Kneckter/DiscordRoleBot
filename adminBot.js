@@ -1,12 +1,17 @@
-const Discord = require('discord.js');
-const bot = new Discord.Client();
+const { Client, Intents } = require('discord.js');
+const myIntents = new Intents();
+myIntents.add(Intents.FLAGS.GUILDS,
+              Intents.FLAGS.GUILD_MEMBERS,
+              Intents.FLAGS.GUILD_MESSAGES,
+              Intents.FLAGS.DIRECT_MESSAGES);
+const bot = new Client({ intents: myIntents });
 const config = require('./config.json');
 const schedule = require('node-schedule');
 const express = require('express');
 const helmet = require('helmet');
 const app = express();
-const sqlite3 = require('sqlite3');
-const sql = new sqlite3.Database('./dataBase.sqlite');
+//const sqlite3 = require('sqlite3');
+//const sql = new sqlite3.Database('./dataBase.sqlite');
 const mysql = require('mysql');
 const request = require('request');
 const wait = async ms => new Promise(done => setTimeout(done, ms));
@@ -234,13 +239,13 @@ setInterval(async function() {
 // ##########################################################################
 // ############################## TEXT MESSAGE ##############################
 // ##########################################################################
-bot.on('message', async message => {
+bot.on('messageCreate', async message => {
     // MAKE SURE ITS A COMMAND
     if(!message.content.startsWith(config.cmdPrefix)) {
         return
     }
     //STOP SCRIPT IF DM/PM
-    if(message.channel.type == "dm") {
+    if(message.channel.type == "DM") {
         return
     }
     // GET CHANNEL INFO
@@ -781,7 +786,7 @@ async function InitDB() {
                                     });
 
                                 // Migrate the old sqlite entries into the table
-                                sql.all(`SELECT * FROM temporary_roles`, (err, rows) => {
+                                /*sql.all(`SELECT * FROM temporary_roles`, (err, rows) => {
                                     if (err) {
                                         console.error(GetTimestamp() + err.message);
                                     }
@@ -800,7 +805,7 @@ async function InitDB() {
                                                 });
                                         }
                                     }
-                                });
+                                });*/
                                 await query(`INSERT INTO metadata (\`key\`, \`value\`) VALUES("DB_VERSION", ${dbVersion+1}) ON DUPLICATE KEY UPDATE \`value\` = ${dbVersion+1};`)
                                     .catch(err => {
                                         console.error(GetTimestamp()+`[InitDB] Failed to execute migration query ${dbVersion}a: (${err})`);
@@ -937,7 +942,7 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999) {
     }).then(async messages => {
         let filterMessages = []
         for(const message of messages.values()) {
-            if(message.id > TwoWeeks && message.id < MinFlake && !message.deleted) {
+            if(message.id > TwoWeeks && message.id < MinFlake && message.deletable) {
                 filterMessages.push(message)
             }
         }
@@ -978,13 +983,13 @@ async function DeleteSingleMessages(channel, MinSeconds, MaxSeconds = 999999999)
     }).then(async messages => {
         let filterMessages = []
         for(const message of messages.values()) {
-            if(message.id > MaxFlake && message.id < MinFlake && message.deleted == false) {
+            if(message.id > MaxFlake && message.id < MinFlake && message.deletable) {
                 filterMessages.push(message)
             }
         }
         if(filterMessages.length > 0) {
             for(const message of filterMessages.values()) {
-                if(!message.deleted) {
+                if(message.deletable) {
                     message.delete().catch();
                     await wait(4000);
                 }
