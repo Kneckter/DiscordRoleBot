@@ -9,7 +9,7 @@ There are also options for scheduling auto delete for different channels.
 
 # SETTING UP THE BOT:
 
-1. Download `Node.js ver v12.18.3` from https://nodejs.org/en/download/
+1. Download `Node.js ver v16.14.2` from https://nodejs.org/en/download/
 
 2. Run `git clone https://github.com/Kneckter/DiscordRoleBot` to copy the bot.
 
@@ -104,8 +104,3 @@ If it cannot find a user in the server that matches the ID in the database, it w
 The donations feature is for processing webhooks from payment companies. Currently supporting PayPal webhooks. This only supports the `CHECKOUT.ORDER.APPROVED` and `PAYMENT.CAPTURE.COMPLETED` webhooks.
 An example PayPal PHP page is included in the `donate.php` file. This PHP page is meant to be used in the root of a PMSF (https://github.com/pmsf/PMSF) folder and its config file copied to the ./config/ folder.
 Since PMSF sets up the Discord account info, we use that info and send it to PayPal to be read in the webhook orders. Save the `donate_config_example.php` to `./config/donate_config.php` if you use the example page.
-
-# LEGACY DATA
-
-This bot moved from SQLite to MySQL at version 1.0.3. If you have temp role data in a SQLite file, the bot will migrate that data to the new DB during its initial setup.
-
