@@ -117,8 +117,35 @@ setInterval(async function() {
                     continue;
                 }
 
-                // Save some variables and write to the table
-                processPayPalOrder(orderJSON, "RECHECK");
+                // Check for invalid reference, in case it was deleted.
+                if (orderJSON.name == "RESOURCE_NOT_FOUND") {
+                    let invoice = rows[rowNumber].invoice;
+                    let userID = rows[rowNumber].userID;
+                    let member = await getMember(userID);
+                    if(!member) {
+                        return;
+                    }
+                    // Update the rejection column if the payment is declined
+                    await query(`UPDATE paypal_info SET rejection=1 WHERE invoice="${invoice}"`)
+                        .then(async result => {
+                            member.send("Hello " + member.user.username + "! Invoice ID `"+invoice+"` is no longer valid. No charge was incurred for this order.")
+                            .catch(error => {
+                                console.error(GetTimestamp() + "Failed to send a DM to user: " + userID);
+                            });
+                            console.warn(GetTimestamp()+`:x: [RESOURCE_NOT_FOUND] Failed to process payment, the status is \`RESOURCE_NOT_FOUND\`. Invoice \`${invoice}\` has been marked as rejected.`);
+                            bot.channels.cache.get(config.mainChannelID).send(`:x: [RESOURCE_NOT_FOUND] Failed to process payment, the status is \`RESOURCE_NOT_FOUND\`. Invoice \`${invoice}\` has been marked as rejected.`)
+                               .catch(err => {console.error(GetTimestamp()+err);});
+                        })
+                        .catch(err => {
+                            console.error(GetTimestamp()+`[RESOURCE_NOT_FOUND] Failed to execute order query 1a: (${err})`);
+                            bot.channels.cache.get(config.mainChannelID).send(`:x: [RESOURCE_NOT_FOUND] Failed to execute order query 1a: (\`${err}\`)`).catch(err => {console.error(GetTimestamp()+err);});
+                            return;
+                        });
+                }
+                else {
+                    // Save some variables and write to the table
+                    processPayPalOrder(orderJSON, "RECHECK");
+                }
             }
         })
         .catch(err => {
@@ -929,6 +956,9 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999) {
         limit: 99,
         after: MaxFlake,
         before: MinFlake
+    },{
+        cache: false,
+        force: true
     }).then(async messages => {
         let filterMessages = []
         for(const message of messages.values()) {
@@ -938,7 +968,7 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999) {
         }
         // Check if the messages between the min/max are in the 2-week range
         if(filterMessages.length > 0) {
-            channel.bulkDelete(filterMessages).then(async deleted => {
+            channel.bulkDelete(filterMessages, true).then(async deleted => {
                 await wait(4000);
                 DeleteBulkMessages(channel, MinSeconds, MaxSeconds);
             }).catch(async error => {
@@ -970,6 +1000,9 @@ async function DeleteSingleMessages(channel, MinSeconds, MaxSeconds = 999999999)
         limit: 99,
         after: MaxFlake,
         before: MinFlake
+    },{
+        cache: false,
+        force: true
     }).then(async messages => {
         let filterMessages = []
         for(const message of messages.values()) {
