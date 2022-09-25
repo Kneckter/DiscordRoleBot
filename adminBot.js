@@ -315,7 +315,7 @@ bot.on('messageCreate', async message => {
         message.delete();
         if(args[0] === "mods") {
             if(m.roles.cache.has(ModR.id) || m.roles.cache.has(AdminR.id)) {
-                cmds = "`" + config.cmdPrefix + "temprole @mention <DAYS> <ROLE-NAME>`   \\\u00BB   to assign a temporary roles\n" +
+                cmds = "`" + config.cmdPrefix + "temprole @mention <DAYS> <ROLE-NAME>`   \\\u00BB   to assign a temporary roles or add time to an assignment\n" +
                     "`" + config.cmdPrefix + "temprole check @mention <ROLE-NAME>`   \\\u00BB   to check the time left on a temporary role assignment\n" +
                     "`" + config.cmdPrefix + "temprole remove @mention <ROLE-NAME>`   \\\u00BB   to remove a temporary role assignment\n" +
                     "`" + config.cmdPrefix + "temprole add @mention <ROLE-NAME> <DAYS>`   \\\u00BB   to add more time to a temporary role assignment\n" +
@@ -502,13 +502,13 @@ bot.on('messageCreate', async message => {
                     await query(`SELECT * FROM temporary_roles WHERE userID="${mentioned.id}" AND temporaryRole="${daRole}"`)
                         .then(async row => {
                             mentioned = message.mentions.members.first();
+                            let name = mentioned.user.username.replace(/[^a-zA-Z0-9]/g, '');
                             if(!row[0]) {
                                 let curDate = new Date().getTime();
                                 let finalDateDisplay = new Date();
                                 let finalDate = curDate + (Number(args[1]) * dateMultiplier);
                                 finalDateDisplay.setTime(finalDate);
                                 finalDateDisplay = await formatTimeString(finalDateDisplay);
-                                let name = mentioned.user.username.replace(/[^a-zA-Z0-9]/g, '');
                                 let values = mentioned.user.id+',\''
                                             +daRole+'\','
                                             +Math.round(curDate/1000)+','
@@ -531,7 +531,22 @@ bot.on('messageCreate', async message => {
                                     });
                             }
                             else {
-                                message.reply("This user already has the role **" + daRole + "** try using `" + config.cmdPrefix + "temprole remove @" + mentioned.user.username + " " + daRole + "` if you want to reset their role.");
+                                let startDateVal = new Date();
+                                startDateVal.setTime(row[0].startDate * 1000);
+                                let startDateTime = await formatTimeString(startDateVal);
+                                let finalDate = Number(row[0].endDate * 1000) + (Number(args[1]) * dateMultiplier);
+                                await query(`UPDATE temporary_roles SET endDate="${Math.round(finalDate / 1000)}", notified=0, username="${name}" WHERE userID="${mentioned.user.id}" AND temporaryRole="${daRole}"`)
+                                    .then(async result => {
+                                        let endDateVal = new Date();
+                                        endDateVal.setTime(finalDate);
+                                        finalDate = await formatTimeString(endDateVal);
+                                        console.log(GetTimestamp() + "[ADMIN] [TEMPORARY-ROLE] \"" + mentioned.user.username + "\" (" + mentioned.user.id + ") was given " + args[1] + " days by: " + m.user.username + " (" + m.id + ") for the role: "+daRole);
+                                        c.send("✅ " + mentioned.user.username + " has had time added until: `" + finalDate + "`! They were added on: `" + startDateTime + "`");
+                                    })
+                                    .catch(err => {
+                                        console.error(GetTimestamp()+`[InitDB] Failed to execute query 16a: (${err})`);
+                                        return;
+                                    });
                             }
                         })
                         .catch(err => {
