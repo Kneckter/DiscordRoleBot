@@ -1198,12 +1198,16 @@ async function processPayPalOrder(orderJSON, source) {
         .then(async rows => {
             let order_id = orderJSON.id;
             let orderDate = invoice.split("-")[1];
-            let tempRole = orderJSON.purchase_units[0].items[0].name;
-            let days = orderJSON.purchase_units[0].items[0].description;
+            var tempRole = "";
+            var days = 0;
             // If payment status doesn't exist, the customer may have an issue with their payment method
-            let paymentStatus = '';
+            let paymentStatus = "";
             if (orderJSON.purchase_units[0].payments && orderJSON.purchase_units[0].payments.captures) {
                 paymentStatus = orderJSON.purchase_units[0].payments.captures[0].status;
+            }
+            if (paymentStatus != "PENDING") {
+                tempRole = orderJSON.purchase_units[0].items[0].name;
+                days = orderJSON.purchase_units[0].items[0].description;
             }
             let paymentVerified = 0;
             let fulfilled = 0;
@@ -1239,6 +1243,13 @@ async function processPayPalOrder(orderJSON, source) {
                             order_id="${order_id}",
                             payment_verified=1;`
             }
+            else if (paymentStatus == "PENDING") {
+                sql_query = `INSERT INTO paypal_info (invoice, userID, orderDate, temporaryRole, days, order_verified, order_json, order_id)
+                        VALUES("${invoice}", ${userID}, ${orderDate}, "${tempRole}", ${days}, 1, '''${JSON.stringify(orderJSON)}''', "${order_id}")
+                        ON DUPLICATE KEY UPDATE
+                            order_verified=1,
+                            order_json='''${JSON.stringify(orderJSON)}''';`
+            }
             else {
                 sql_query = `INSERT INTO paypal_info (invoice, userID, orderDate, temporaryRole, days, order_verified, order_json, order_id)
                         VALUES("${invoice}", ${userID}, ${orderDate}, "${tempRole}", ${days}, 1, '''${JSON.stringify(orderJSON)}''', "${order_id}")
@@ -1254,7 +1265,7 @@ async function processPayPalOrder(orderJSON, source) {
             await query(sql_query)
                 .then(async results => {
                     // If the order has a payment status of complete, assign the time. else, drop out to wait for the payment webhook
-                    if (!fulfilled && paymentStatus != '' && paymentStatus != 'DECLINED' && (paymentStatus == "COMPLETED" || config.donations.forcePaymentStatus == "yes")) {
+                    if (!fulfilled && paymentStatus != '' && paymentStatus != 'DECLINED' && paymentStatus != 'PENDING' && (paymentStatus == "COMPLETED" || config.donations.forcePaymentStatus == "yes")) {
                         // Check if the person already has the requested role
                         await query(`SELECT * FROM temporary_roles WHERE userID = "${userID}" AND temporaryRole = "${tempRole}" LIMIT 1;`)
                             .then(async row => {
