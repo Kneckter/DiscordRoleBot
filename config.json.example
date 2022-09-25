@@ -46,5 +46,6 @@
         "ROLE-ID-1",
         "Leave the array empty to block all manual role changes"
     ],
-	"daysNotice": 5
+	"daysNotice": 5,
+	"reverseDate": false
 }
