@@ -1505,6 +1505,7 @@ async function query(sql, args) {
 
 async function formatTimeString(date) {
     return new Promise((resolve) => {
+        var results = "";
         let year = date.getFullYear();
         let month = date.getMonth() + 1;
         let day = date.getDate();
@@ -1518,7 +1519,12 @@ async function formatTimeString(date) {
         if (minute < 10) { minute = "0" + minute.toString(); }
         if (second < 10) { second = "0" + second.toString(); }
 
-        let results = year + "-" + month + "-" + day + " @" + hour + ":" + minute + ":" + second;
+        if (config.reverseDate) {
+            results = day + "-" + month + "-" + year + " @" + hour + ":" + minute + ":" + second;
+        }
+        else {
+            results = year + "-" + month + "-" + day + " @" + hour + ":" + minute + ":" + second;
+        }
         return resolve(results);
     });
 }

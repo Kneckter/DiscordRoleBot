@@ -70,6 +70,7 @@ There are also options for scheduling auto delete for different channels.
 "blockManualRoles" - This is a string to enable the feature that will remove roles that were manually added so only the ones with database records are kept.
 "blockTheseRoles" - This is an array of strings for the role IDs that the blockManualRoles feature will check for manual assignments. Leave the array blank to watch all roles.
 "daysNotice" - This is an int used to control how many days are left on a temp role before notifying the user that they will lose it.
+"reverseDate" - This is a boolean that is used to control the order of the date sent in Discord messages. The default is `false` and displays the date as YYYY-MM-DD. When set to `true`, it displays the date as DD-MM-YYYY.
 ```
 
 # LAUNCHING IT
@@ -88,7 +89,7 @@ Instead, add it to PM2 with `pm2 start ecosystem.config.js`
 --`!paypal`   »   for a link to our PayPal<br>
 
 `!help mods`<br>
---`!temprole @mention <DAYS> <ROLE-NAME>`   »   to assign a temporary roles<br>
+--`!temprole @mention <DAYS> <ROLE-NAME>`   »   to assign a temporary roles or add time to an assignment<br>
 --`!temprole check @mention <ROLE-NAME>`   »   to check the time left on a temporary role assignment<br>
 --`!temprole remove @mention <ROLE-NAME>`   »   to remove a temporary role assignment<br>
 --`!temprole add @mention <ROLE-NAME> <DAYS>`   »   to add more time to a temporary role assignment<br>
