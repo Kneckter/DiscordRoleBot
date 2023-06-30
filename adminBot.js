@@ -986,8 +986,8 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999) {
             channel.bulkDelete(filterMessages, true).then(async deleted => {
                 await wait(4000);
                 DeleteBulkMessages(channel, MinSeconds, MaxSeconds);
-            }).catch(async error => {
-                console.error(GetTimestamp() + "Failed to bulk delete messages in " + channel.name + ". Trying single message delete.");
+            }).catch(async ()=> {
+                //console.error(GetTimestamp() + "Failed to bulk delete messages in " + channel.name + ". Trying single message delete.");
                 await wait(4000);
                 DeleteSingleMessages(channel, MinSeconds, MaxSeconds);
                 return;
@@ -998,8 +998,8 @@ async function DeleteBulkMessages(channel, MinSeconds, MaxSeconds = 999999999) {
             await wait(4000);
             DeleteSingleMessages(channel, MinSeconds, MaxSeconds);
         }
-    }).catch(error => {
-        console.error(GetTimestamp() + "Failed to bulk delete messages in " + channel.name + ". Trying single message delete.");
+    }).catch(()=> {
+        //console.error(GetTimestamp() + "Failed to bulk delete messages in " + channel.name + ". Trying single message delete.");
         DeleteSingleMessages(channel, MinSeconds, MaxSeconds);
         return;
     });
@@ -1028,13 +1028,13 @@ async function DeleteSingleMessages(channel, MinSeconds, MaxSeconds = 999999999)
         if(filterMessages.length > 0) {
             for(const message of filterMessages.values()) {
                 if(message.deletable) {
-                    message.delete().catch();
+                    message.delete().catch(()=> null);
                     await wait(4000);
                 }
             }
             DeleteSingleMessages(channel, MinSeconds, MaxSeconds);
         }
-    }).catch(error => {
+    }).catch(()=> {
         console.error(GetTimestamp() + "Failed to clear channel single messages in " + channel.name);
         return;
     });
