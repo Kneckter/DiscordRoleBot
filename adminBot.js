@@ -1240,8 +1240,24 @@ async function processPayPalOrder(orderJSON, source) {
                 }
             }
             // Scrub the personal names of quotes
+            //console.log(JSON.stringify(orderJSON));
             orderJSON.payer.name.given_name = orderJSON.payer.name.given_name.replace(/[^a-zA-Z0-9]/g, '');
             orderJSON.payer.name.surname = orderJSON.payer.name.surname.replace(/[^a-zA-Z0-9]/g, '');
+            if (orderJSON.hasOwnProperty("payment_source")) {
+                if (orderJSON.payment_source.hasOwnProperty("paypal")) {
+                    orderJSON.payment_source.paypal.name.given_name = orderJSON.payment_source.paypal.name.given_name.replace(/[^a-zA-Z0-9]/g, '');
+                    orderJSON.payment_source.paypal.name.surname = orderJSON.payment_source.paypal.name.surname.replace(/[^a-zA-Z0-9]/g, '');
+                }
+                if (orderJSON.payment_source.hasOwnProperty("venmo")) {
+                    orderJSON.payment_source.venmo.name.given_name = orderJSON.payment_source.venmo.name.given_name.replace(/[^a-zA-Z0-9]/g, '');
+                    orderJSON.payment_source.venmo.name.surname = orderJSON.payment_source.venmo.name.surname.replace(/[^a-zA-Z0-9]/g, '');
+                }
+            }
+            if (orderJSON.hasOwnProperty("purchase_units")) {
+                if (orderJSON.purchase_units[0].hasOwnProperty("shipping")) {
+                    orderJSON.purchase_units[0].shipping.name.full_name = orderJSON.purchase_units[0].shipping.name.full_name.replace(/[^a-zA-Z0-9]/g, '');
+                }
+            }
             // Write to the DB if there isn't a row and if there is but unfulfilled
             let sql_query = ``;
             if (paymentStatus == "COMPLETED") {
